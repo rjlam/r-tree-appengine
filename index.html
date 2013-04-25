@@ -1,10 +1,16 @@
 <html>
 <head>
+	<script type="text/javascript" src="/scripts/main.js"></script>
 	<script type="text/javascript" src="/scripts/comm.js"></script>
 	<script type="text/javascript">
 		var server_token = "{{ token }}";	// Token passed to you by the server
 		var client_id = "{{ id }}";
 	</script>
 </head>
-<body></body>
+<body>
+	<form name="query_box" method="post" onsubmit="parseQuery(this); return false;">
+		Query: <input type="text" name="query">
+		<input type="submit" name="submit">
+	</form>
+</body>
 </html>

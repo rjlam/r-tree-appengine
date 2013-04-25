@@ -38,7 +38,7 @@ Updates channel when user is host
 function updateChannel(play, endflag, num) {
 	console.log('updateChannel: ' + server_session_key + ', ' + hostingIndex + ', ' + play + ', ' + endflag + ', ' + num);
 
-	$.post('/update',
+	$.post('/get',
 		{'session_key': server_session_key, 'curIdx': hostingIndex, 'play': play, 'endflag': endflag, 'num': num},
 		function(message) {
 			console.log('/update response:' + message);
@@ -62,10 +62,14 @@ function handleServerMessage(message){
 	while (typeof message == 'string' && message.length > 0) {
 		message = JSON.parse(message);
 	}
+	
 	if (typeof message.type == 'undefined') {
 		console.log('Missing message.type');
 		return;
 	}
 	
-	if (typeof message.type == 'results')
+	if (typeof message.type == 'results') {
+		returnRectangles(message.rect)
+		return;
+	}
 }

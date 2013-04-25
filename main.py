@@ -3,6 +3,8 @@ import datetime
 import string
 import random
 
+from django.utils import simplejson
+
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 
@@ -25,7 +27,12 @@ class HandleQuery(webapp.RequestHandler):
         
     def getRectangles(self, queryString):
         # Hook into R-tree code here
-        return ""
+        # rect = parseRectangles()
+        message_template = {
+            'type': 'results',
+            'rect': ''  # will be a list of rectangles
+        }
+        return simplejson.dumps(message_template)
 
 #
 class MainPage(webapp.RequestHandler):
