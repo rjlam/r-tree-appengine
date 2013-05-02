@@ -1,0 +1,49 @@
+Here is how to use the Gooleified R-Tree: 
+(add "from rTree import *" )
+1) Initiate: 
+
+# those values can be tweaked, obviously
+pageSize = 100
+minEntries = 50
+
+meta = DBMetaData.get_by_key_name("metadata")
+# not initialized yet 
+if not meta : 
+	tree = RTree(pageSize, minEntries)
+	tree.save()
+# we already have an RTree, grab the root
+else :
+	tree = RTree(None, None)
+	
+	
+	
+2) Fill with entries: 
+
+Example 1 - individual: 
+
+recs = [Rect([0, 0], [2, 2]), Rect([5, 5], [7, 7])]
+i = 0
+for item in recs : 
+	rec = Entry(item)
+	tree.insertRecord(rec)
+	
+#important, we need to update metadata!
+tree.save()	
+	
+Example 2 - from a file in the same directory as the web application: 
+
+fileName = "someFile.dat"
+# the file is assumed to be of the form "x_min\ty_min\tx_max\ty_max\n"
+insertFromTree(fileName, tree)
+
+
+3) Search: 
+
+searchRec = Entry(Rect([6, 4],[10,6]))
+results = tree.search(searchRec)
+# results is a list of Entry objects
+
+
+4) Delete: 
+
+Don't bother at this point - Delete is buggy. We won't need it for the application but I'll fix it anyway.
