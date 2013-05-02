@@ -540,34 +540,5 @@ def insertFromTree(fname, tree):
 	f.close()		
 
 
-if __name__ == "__main2__" :
-	 	recs = [Rect([0, 0], [2, 2]), Rect([5, 5], [7, 7]), Rect([8, 5], [9, 6]), Rect([7, 1], [9, 2]), Rect([9, 12], [10, 14]), Rect([2, 1], [4, 11]), Rect([17, 12], [20, 21])]
-		tree = RTree(3,2)
-		i = 0
-		for item in recs : 
-			i+=1
-			rec = Entry(item)
-			tree.insertRecord(rec)
-			print "-----", i , "-----"
-			print len(tree.root.entries)
-			printLeaves(tree.root)
-		print "\n\n\n++++++++\nsearching: "
-		rec = Entry(Rect([6, 4],[10,6]))
-		l = tree.search(rec)
-		for item in l : 
-			print item.nodeId
-		tree.printTree()
-		print "DELETING... "
-		i = 1
-		for item in recs : 
-			tree.deleteRecord(Entry(item))
-			print "-----", i , "-----"
-			print len(tree.root.entries) 
-			if len(tree.root.entries) > 0 : print (tree.root.entries[0].getChild() is None)
-			printLeaves(tree.root)
-			print "-----------"
-			i+=1
-
-			
-		
+	
 				
