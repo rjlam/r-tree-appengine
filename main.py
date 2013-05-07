@@ -11,6 +11,10 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.api import channel
 from google.appengine.ext import db
 
+import bulkRTree
+import rTree
+
+
 # Datastore model to keep track of channels
 class ChannelPool(db.Model):
     client_id = db.StringProperty()
@@ -34,8 +38,28 @@ class HandleQuery(webapp.RequestHandler):
         }
         return simplejson.dumps(message_template)
 
-#
 class MainPage(webapp.RequestHandler):
+    def bulkLoad(self) : 
+        meta = rTree.DBMetaData.get_by_key_name("metadata")
+        if meta is None : 
+            rtree = bulkRTree.RTree(100, 50)
+            fn = "USclpoint.fnl"
+            bulkRTree.insertFromTree(fn, rtree)
+            rtree.save()
+
+    def randomSearch(self):
+        meta = rTree.DBMetaData.get_by_key_name("metadata")
+        if meta is None :	
+            return None	
+        rtree = rTree.RTree(None, None)
+        # just a random example for now
+        e = rTree.Entry(rTree.Rect([-91.09, 45.15],[-90.07, 46.16])) 
+        l = rtree.search(e)
+        print "number of search results : ", len(l) , " "
+        if len(l) > 0 :
+            print l[0].I.boundingBoxMin, l[0].I.boundingBoxMax, l[0].nodeId
+        print "Number of entries in tree: ", rTree.countEntries(rtree.root)	
+		
     def get(self):
         # Get channel from available pool
         q = ChannelPool.all().filter('in_use = ', False)
@@ -45,7 +69,7 @@ class MainPage(webapp.RequestHandler):
             token = channel.create_channel(client_id, duration_minutes = 1440)
             expire = datetime.datetime.now() + datetime.timedelta(0, 1440)
             
-            ch = ChannelPool(key_name = client_id, token, True, expire)
+            ch = ChannelPool(key_name = client_id, token=token, in_use=True, expire=expire)
             ch.put()
         else:
             now = datetime.datetime.now()
@@ -64,17 +88,21 @@ class MainPage(webapp.RequestHandler):
                 token = channel.create_channel(client_id, duration_minutes = 1440)
                 expire = datetime.datetime.now() + datetime.timedelta(0, 1440)
                 
-                ch = ChannelPool(key_name = client_id, token, True, expire)
-                ch.put()
-        
+                ch = ChannelPool(key_name = client_id, token=token, in_use=True, expire=expire)
+                ch.put()        
         template_values = {'token': token,
                            'id': client_id
                            }
-        template = jinja2.Environment.get_template('index.html')
+        env = jinja2.Environment(loader=jinja2.PackageLoader('main', '.'))
+        template = env.get_template('index.html')
+        
+        ## should be connected to a button
+        self.bulkLoad()
+        ## should follow after the actual search query
+        self.randomSearch()
         self.response.out.write(template.render(template_values))
-        self.response.out.write()
 
-application = webapp.WSGIApplication([('/', MainPage)], debug=True)
+app = webapp.WSGIApplication([('/', MainPage)], debug=True)
 
 def getID():
     chars=string.ascii_letters + string.digits

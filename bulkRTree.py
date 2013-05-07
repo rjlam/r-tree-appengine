@@ -1,26 +1,9 @@
-#!/usr/bin/env python
-#
-# Copyright Cathrin Weiss (cweiss@cs.wisc.edu), 2013
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#	 http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 import sys
 import os
 from Queue import Queue
 from google.appengine.api import memcache, users
 from google.appengine.ext import db, webapp
 import cPickle
-
 
 class Rect :
 	boundingBoxMin = []
@@ -72,7 +55,6 @@ class Rect :
 		for i in range(0, len(self.boundingBoxMin)) : 
 			self.boundingBoxMin[i] = min(self.boundingBoxMin[i],r.boundingBoxMin[i])
 			self.boundingBoxMax[i] = max(self.boundingBoxMax[i],r.boundingBoxMax[i])
-		
 
 #########
 class DBNode(db.Model):
@@ -81,6 +63,7 @@ class DBNode(db.Model):
 	entries = db.BlobProperty()
 
 
+		
 #########		
 class Entry : 
 	nodeId = None
@@ -91,19 +74,18 @@ class Entry :
 		self.I = r
 		self.nodeId = nId
 		self.child = c
-		#if c is not None : 
-		#	self.child = c.save()
- 
+		
 	def getChild(self):
 		if self.child is None : 
 			return None
-		if type(self.child) == type(Node(None)) : 
-			return self.child
+		if type(self.child) == type(Node(0)) : 
+			return self.child	
 		dbn = DBNode.get_by_id(self.child)
 		if dbn is not None : 
 			return Node(dbn)
 		return None
-		
+
+
 #########				
 class Node : 
 	
@@ -112,47 +94,38 @@ class Node :
 	isRoot = False
 	dbn = None
 	
-	def __init__(self, dbNode, s = None, root = False):
-		if dbNode is None : 
-			self.entries = []
-			self.size = s
-			self.isRoot = root
-		else : 
-			self.dbn = dbNode
-			self.entries = cPickle.loads(dbNode.entries)
-			self.size = dbNode.size
-			self.isRoot = dbNode.isRoot	
+	def __init__(self, s, root = False):
+		self.entries = []
+		self.size = s
+		self.isRoot = root
 		
 	def search(self, s):
 		l = []
 		if len(self.entries) > 0 : 
-			ent = Entry(self.entries[0].I, self.entries[0].nodeId, self.entries[0].child)
-			if ent.getChild() is None : 
+			if self.entries[0].child is None : 
 				for e in self.entries : 
-					ent = Entry(e.I, e.nodeId, e.child)
-					if ent.I.overlaps(s.I) : 
-						l.append(ent)
+					if e.I.overlaps(s.I) : 
+						l.append(e)
 			else : 
 				for e in self.entries : 
-					ent = Entry(e.I, e.nodeId, e.child)
-					l2 = ent.getChild().search(s)
+					l2 = e.child.search(s)
 					for item in l2 : 
 						l.append(item)
 		return l
-		
+
 	def save(self):
 		if self.dbn is None: 
 			self.dbn = DBNode(size=self.size, isRoot=self.isRoot)		
 		self.dbn.entries = cPickle.dumps(self.entries)
+		assert(len(self.entries) > 0)
 		self.dbn.put()
 		return self.dbn.key().id()
-				
-###########
+
 
 class DBMetaData(db.Model):
 	rootId = db.IntegerProperty()
 	minEntries = db.IntegerProperty()
-	curId = db.IntegerProperty()
+	curId = db.IntegerProperty()				
 		
 class RTree : 
 	root = None
@@ -160,22 +133,14 @@ class RTree :
 	curId = 0
 	rootKey = None
 	
-	def __init__(self, pageSize = None , mE = None):
-		if pageSize is None and mE is None : 
-			dbm = DBMetaData.get_by_key_name("metadata")
-			self.rootKey = dbm.rootId
-			self.minEntries = dbm.minEntries
-			self.curId = dbm.curId
-			self.root = Node(DBNode.get_by_id(self.rootKey))
-		else : 
-			self.root = Node(None, pageSize, True)
-			self.minEntries = mE
-			self.curId = 0		
-			self.root.save()		
+	def __init__(self, pageSize, mE):
+		self.root = Node(pageSize, True)
+		self.minEntries = mE
+		self.curId = 0		
 
 	def save(self):
 		if self.rootKey is None :
-			self.rootKey = self.root.save()
+			self.rootKey = self.depthSaveTree(self.root)
 		dbm = DBMetaData(rootId = self.rootKey, minEntries=self.minEntries, curId=self.curId, key_name="metadata")
 		dbm.put()
 	
@@ -185,7 +150,7 @@ class RTree :
 		while True : 
 			path.append(n)
 			if len(n.entries) : 				
-				if n.entries[0].getChild() is None : 
+				if n.entries[0].child is None : 
 					return n
 				if depth > 0 and d == depth : 
 					return n
@@ -204,7 +169,7 @@ class RTree :
 						oArea = curEntry.I.getExpandVolume(newEntry.I)
 						if expandArea < oArea : 
 							curEntry = e
-				n = curEntry.getChild()
+				n = curEntry.child
 					
 			else :
 				return n
@@ -302,7 +267,7 @@ class RTree :
 	def adjustTree(self, path, argN, argNN=None):
 		n = argN
 		newNode = None
-		n.save()
+		
 		if n == self.root : 
 			return (n,argNN)
 			
@@ -312,29 +277,29 @@ class RTree :
 		for j in range(1,len(n.entries)) :
 			r.includeR(n.entries[j].I)
 		for e in parent.entries : 
-			if e.getChild() == n : 
+			if e.child == n : 
 				e.I.boundingBoxMin = r.boundingBoxMin
 				e.I.boundingBoxMax = r.boundingBoxMax
 				break
 				
 		if argNN is not None: 
 			nEntry = Entry(Rect([],[]))
-			childVal = argNN.save()
-			nEntry.child = childVal
+			nEntry.child = argNN
 			nEntry.I = Rect(argNN.entries[0].I.boundingBoxMin, argNN.entries[0].I.boundingBoxMax)
 			for j in range(1,len(argNN.entries)) :
+				#print j, len(argNN.entries)
 				nEntry.I.includeR(argNN.entries[j].I)
 			if len(parent.entries) < parent.size : 				
 				parent.entries.append(nEntry)
+
 			else : 
 				newEntries = []
 				newEntries.extend(parent.entries)
 				newEntries.append(nEntry)
 				g1, g2 = self.nodeSplit(newEntries)
 				parent.entries = g1[1]
-				newNode = Node(None, self.root.size)
+				newNode = Node(parent.size, False)
 				newNode.entries = g2[1]
-			parent.save()
 		return self.adjustTree(path, parent, newNode)
 			
 	def insertRecord(self, rec, depth = -1) :
@@ -355,198 +320,83 @@ class RTree :
 			l.extend(leaf.entries)
 			g1, g2 = self.nodeSplit(l)
 			leaf.entries = g1[1]
-			newLeaf = Node(None, self.root.size, False)
+			newLeaf = Node(self.root.size, False)
 			newLeaf.entries = g2[1]
 		r, ar = self.adjustTree(path, leaf, newLeaf)
 		if ar is not None : 
-			root = Node(None, self.root.size, True)
+			root = Node(self.root.size, True)
 			root.entries = []
 			e1 = Entry(Rect([],[]))
 			r.isRoot = False
-			ar.isRoot = False
-			e1.child = r.save()
+			e1.child = r
 			e1.I = Rect(r.entries[0].I.boundingBoxMin, r.entries[0].I.boundingBoxMax)
 			for i in range(1,len(r.entries)) : 
 				e1.I.includeR(r.entries[i].I)
 
 			e2 = Entry(Rect([],[]))
-			e2.child = ar.save()
+			e2.child = ar
 			e2.I = Rect(ar.entries[0].I.boundingBoxMin, ar.entries[0].I.boundingBoxMax)
 			for i in range(1,len(ar.entries)) : 
 				e2.I.includeR(ar.entries[i].I)
 			
 			root.entries.append(e1)
 			root.entries.append(e2)
-			
 		self.root = root
-		self.rootKey = self.root.save()
 
-
-	### DELETE
-	
-	def printLeaves(self, n):
-		print "class leaf printing"
-		if len(n.entries) == 0 : 
-			print "empty!"
-			return
-		if n.entries[0].getChild() is None : 
-			for e in n.entries : 
-				print e.nodeId
-				print e.I.boundingBoxMin
-				print e.I.boundingBoxMax
-		print "done"
 		
-	def findLeaf(self, path, n, rec):
-		p = []
-		p.extend(path)
-		p.append(n)
-		if len(n.entries) > 0 and n.entries[0].getChild() is None : 
-			for e in n.entries : 
-				if e.I == rec.I : 
-					return (n,p)			
-			return (None, None)
-
+	def depthSaveTree(self, n ):
+		if n.entries[0].child is None : 
+			return n.save()			
 		for e in n.entries : 
-			if e.I.overlaps(rec.I) :
-				res = self.findLeaf(p,e.getChild(), rec)
-				if res is not None : 
-					l,lp = res
-					if l is not None : 
-						return (l,lp)
-		return (None, None)
+			eChild = self.depthSaveTree(e.child)
+			e.child = eChild
+		return n.save()	
 		
-	def condenseTree(self, path, leaf):
-		n = leaf
-		depth = len(path)
-		d = depth
-		m = path.pop()
-		assert(m==n)
-		q = set()		
-		while True : 
-			if self.root == n : 
-				break
-			p = path.pop()
-			en = None
-			for e in p.entries : 
-				if e.getChild() == n : 
-					en = e
-			if len(n.entries) < self.minEntries : 
-				p.entries.remove(en)
-				q.add((n,d))
-			else : 
-				en.I = Rect(n.entries[0].I.boundingBoxMin, n.entries[0].I.boundingBoxMax)
-				for i in range(1,len(n.entries)) : 
-					en.I.includeR(n.entries[i].I)
-			n = p
-			d -= 1
-		for n,d in q : 
-			print "here! in Q.", len(q)
-			if d == depth : 
-				print d, depth
-				for e in n.entries : 
-					print e.nodeId, e.I.boundingBoxMin, e.I.boundingBoxMax, " , ", d
-					self.insertRecord(e)
-					
-			else : 
-				print "other: ", len(n.entries), " , " 
-				for e in n.entries : 
-					print e.nodeId, e.I.boundingBoxMin, e.I.boundingBoxMax, " , ", d
-					self.insertRecord(e, d)
-					
 	
-				
-			
-	def deleteRecord(self, rec):
-		path = []
-		res = self.findLeaf(path, self.root, rec)
-		if res is None or res[0] is None : 
-			return False
-		result = False
-		leaf,lPath = res
-		if leaf is not None: 
-			for e in leaf.entries : 
-				if e.I == rec.I : 
-					leaf.entries.remove(e)
-					result = True
-					break
-			self.condenseTree(lPath, leaf)
-			if len(self.root.entries) == 1 and self.root.entries[0].getChild() is not None: 
-				self.root.I = self.root.entries[0].getChild()
-				self.root.isRoot = True
-		return result
-		
-	### SEARCH
-	def search(self, rec):
-		return self.root.search(rec)
-		
-	def printTree(self):
-		print "Level: 1 , Root"
+	def saveTree(self):		
 		n = self.root
-		i = 2
 		l = Queue()
-		l.put((self.root,1))
-		level = 1
-		s = "   "
-		while not l.empty() :
-			cur, lev = l.get()
-			for i in range(0, lev): 
-				s += "  "
-			if lev > level: 
-				print "Level: ", lev
-				level = lev
+		l.put((None, self.root))
+		allNodes = []
+		while not l.empty() : 
+			parEntry, cur = l.get()
+			allNodes.append(cur)
+				
 			if len(cur.entries) > 0 : 
 				for e in cur.entries : 
-					if e.getChild() is not None : 
-						l.put((e.getChild(), lev+1))
-				entr = ""
-				for e in cur.entries : 
-					entr += str(e.I.boundingBoxMin) + "," +str(e.I.boundingBoxMax) + " ; "
-				print s , "E:",len(cur.entries)	,entr
-		
-	
-		
-def printLeaves(n, depth=1):
-	if n is None : 
-		return
-	if len(n.entries) == 0 : 
-		print "empty!"
-		return
-	if n.entries[0].getChild() is None : 
-		for e in n.entries : 
-			print e.nodeId, " depth: ", depth
-			print e.I.boundingBoxMin
-			print e.I.boundingBoxMax
-	else :
-		for e in n.entries :
-			printLeaves(e.getChild(), depth+1)
+					if e.child is not None: 
+						l.put((e, e.child))
+						e.child = "0"
+			if parEntry is not None : 
+				parEntry.child = cur.save()
+				if parEntry in self.root.entries : 
+					print self.root.entries[0].child
+		for n in allNodes : 
+			n.save()
+		self.save()			 			
+			
 
 def countEntries(n):
-	#print "LEN ", len(n.entries)
 	if n is None : 
 		return 0
 	if len(n.entries) == 0 : 
 		return 0
 	result = 0
-	ent = Entry(n.entries[0].I, n.entries[0].nodeId, n.entries[0].child)
-	if ent.getChild() is None : 
+	if n.entries[0].child is None : 
 		return len(n.entries)
 	else :
 		for e in n.entries :
-			ent = Entry(e.I, e.nodeId, e.child)
-			result += countEntries(ent.getChild())
+			result += countEntries(e.child)
 	return result
 
 def insertFromTree(fname, tree):
-	#tree = RTree(12,6)
 	f = open(fname)
 	for line in f : 
 		xmin, ymin, xmax, ymax = map(float, line.strip().split("\t"))
-		#print xmin, ymin, xmax, ymax
 		r = Rect([xmin,ymin], [xmax, ymax])
 		rec = Entry(r)
 		tree.insertRecord(rec)
-	f.close()		
+	f.close()	
 
 
-	
 				
