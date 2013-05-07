@@ -2,6 +2,7 @@ import jinja2
 import datetime
 import string
 import random
+import os
 
 from django.utils import simplejson
 
@@ -14,6 +15,7 @@ from google.appengine.ext import db
 import bulkRTree
 import rTree
 
+JINJA_ENVIRONMENT = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
 
 # Datastore model to keep track of channels
 class ChannelPool(db.Model):
@@ -25,27 +27,72 @@ class ChannelPool(db.Model):
 class HandleQuery(webapp.RequestHandler):
     def post(self):
         client_id = self.request.get('client_id')
-        query = self.request.get('query')
-        message = self.getRectangles(query)
+        token = self.request.get('server_token')
+        sPoint = self.request.get('startPoint')
+        ePoint = self.request.get('endPoint')
+        message = self.getRectangles(sPoint, ePoint)
         channel.send_message(client_id, message)
-        
-    def getRectangles(self, queryString):
-        # Hook into R-tree code here
-        # rect = parseRectangles()
-        message_template = {
-            'type': 'results',
-            'rect': ''  # will be a list of rectangles
-        }
-        return simplejson.dumps(message_template)
 
-class MainPage(webapp.RequestHandler):
-    def bulkLoad(self) : 
+    def computePath(self, sPoint, ePoint, entryList):
+	    ## TODO: compute path from sPoint to ePoint using Entry objects in entryList
+	    return []
+        
+    def getRectangles(self, sPoint, ePoint):
+        # Hook into R-tree code here
+        message_template = {
+            'type': 'error',
+            'message': 'ok',  # will be a list of rectangles
+            'rect': '[]'
+        }
         meta = rTree.DBMetaData.get_by_key_name("metadata")
-        if meta is None : 
-            rtree = bulkRTree.RTree(100, 50)
-            fn = "USclpoint.fnl"
-            bulkRTree.insertFromTree(fn, rtree)
-            rtree.save()
+        if meta is None :	
+            message_template['message'] = "No RTree in database."
+            return simplejson.dumps(message_template)
+        
+        try: 
+            sParts = map(float, sPoint.split(','))
+            eParts = map(float, ePoint.split(','))
+        except:
+            message_template['message'] = "Invalid input format"
+            return simplejson.dumps(message_template)
+
+        if len(sParts) != 2 or len(eParts) != 2 : 
+            message_template['message'] = "Invalid input format"
+            return simplejson.dumps(message_template)
+        message_template['type'] = 'results'
+        tree = rTree.RTree(None, None)
+        minX = min(sParts[0], eParts[0])
+        minY = min(sParts[1], eParts[1])
+        maxX = max(sParts[0], eParts[0])
+        maxY = max(sParts[1], eParts[1])
+        allRect = rTree.Entry(rTree.Rect([minX,minY],[maxX, maxY]))
+        results = tree.search(allRect)
+        
+        path = self.computePath(sPoint, ePoint, results)
+        message_template['rect'] = str(path)        
+        return simplejson.dumps(message_template)
+		
+class DoBulkLoad(webapp.RequestHandler):
+	def post(self):
+		msg = "No bulk loading to do"
+		meta = rTree.DBMetaData.get_by_key_name("metadata")
+		if meta is None : 
+			rtree = bulkRTree.RTree(100, 50)
+			fn = "USclpoint.fnl"
+			bulkRTree.insertFromTree(fn, rtree)
+			rtree.save()
+			msg = "RTree bulk loading completed."
+		else :
+			print msg
+			
+		template_values = {'id': self.request.get('client_id'), 'token': self.request.get('server_token'), 'message':msg}
+		template = JINJA_ENVIRONMENT.get_template('loaded.html')		
+		self.response.out.write(template.render(template_values))
+		
+	def get(self):		
+		self.post()
+			
+class MainPage(webapp.RequestHandler):
 
     def randomSearch(self):
         meta = rTree.DBMetaData.get_by_key_name("metadata")
@@ -93,16 +140,14 @@ class MainPage(webapp.RequestHandler):
         template_values = {'token': token,
                            'id': client_id
                            }
-        env = jinja2.Environment(loader=jinja2.PackageLoader('main', '.'))
-        template = env.get_template('index.html')
-        
-        ## should be connected to a button
-        self.bulkLoad()
-        ## should follow after the actual search query
-        self.randomSearch()
+
+        template = JINJA_ENVIRONMENT.get_template('index.html')        
         self.response.out.write(template.render(template_values))
 
-app = webapp.WSGIApplication([('/', MainPage)], debug=True)
+    def post(self):
+        self.get()
+
+app = webapp.WSGIApplication([('/bulk_load', DoBulkLoad),('/send_query', HandleQuery),('/', MainPage),], debug=True)
 
 def getID():
     chars=string.ascii_letters + string.digits

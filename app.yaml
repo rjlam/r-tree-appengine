@@ -4,11 +4,10 @@ runtime: python27
 api_version: 1
 threadsafe: yes
 
-handlers:
-- url: /favicon\.ico
-  static_files: favicon.ico
-  upload: favicon\.ico
-    
+handlers:    
+- url: /scripts
+  static_dir: scripts
+  
 - url: .*
   script: main.app
 

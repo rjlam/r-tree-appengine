@@ -1,5 +1,7 @@
 <html>
 <head>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+	<script type="text/javascript" src="/_ah/channel/jsapi"></script>
 	<script type="text/javascript" src="/scripts/main.js"></script>
 	<script type="text/javascript" src="/scripts/comm.js"></script>
 	<script type="text/javascript">
@@ -8,14 +10,21 @@
 	</script>
 </head>
 <body>
-	<form name="query_box" method="post" onsubmit="parseQuery(this); return false;">
-		Query: <input type="text" name="query">
+	<form name="query_box" method="post" onsubmit="parseQuery();return false;">
+		Start point: <input type="text" name="startPoint" id="startPoint"> <br/>
+		End point: <input type="text" name="endPoint" id="endPoint"><br/>
+		<input type="hidden" name="client_id" value="{{ id }}"/>
+		<input type="hidden" name="server_token" value="{{ token }}"/>
 		<input type="submit" name="submit">
 	</form>
 	
-	<form name="bulk_load" method="post" onsubmit="doBulkLoad(); return false;">
-		<button name="bulkLoad">bulk load</button>
+	<form id="bulk_load_form" name="bulk_load" method="post" action="/bulk_load">
+		<input type="hidden" name="client_id" value="{{ id }}"/>
+		<input type="hidden" name="server_token" value="{{ token }}"/>
+		<button onClick="$('#bulk_load_form').submit(); return false;">bulk load</button>
 	</form>
-	
+	<p/>
+	<div id="messageDiv"></div>
+	<p/>
 </body>
 </html>

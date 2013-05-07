@@ -51,25 +51,35 @@ function updateChannel(play, endflag, num) {
  * Communication back and forth between server and client
  * */
 // Send a query string to the server
-function sendQuery(qString){
-	$.post('/send_query', {'client_id': client_id, 'query:' qString});
+function sendQuery(sPoint, ePoint){
+	$.post('/send_query', {'client_id': client_id, 'startPoint': sPoint, 'endPoint': ePoint});
+	return true;
 }
+
 
 // Parse the message from the server
 function handleServerMessage(message){
 	message = message.data;
 
 	while (typeof message == 'string' && message.length > 0) {
-		message = JSON.parse(message);
+		message = JSON.parse(message);		
 	}
 	
-	if (typeof message.type == 'undefined') {
+	if (message.type == 'undefined') {
 		console.log('Missing message.type');
 		return;
 	}
 	
-	if (typeof message.type == 'results') {
-		returnRectangles(message.rect)
+	if (message.type == 'error'){
+		console.log("There was a problem with your query input: "+message.message);
+		$("#messageDiv").append("There was a problem with your query input: "+message.message);
+		return;
+	}
+	
+	if (message.type == 'results') {
+		console.log("Your query was submitted successfully. Your list of rectangles: "+message.rect);
+		$("#messageDiv").append("Your query was submitted successfully. Your list of rectangles: "+message.rect);
+		//returnRectangles(message.rect)
 		return;
 	}
 }

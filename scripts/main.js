@@ -11,10 +11,15 @@ function init(){
 }
 
 // Handles the input from the user and prepare it for message to server
-function parseQuery(element){
-	var query = element.getElementsByTagName('input');
-	sendQuery(query);
+function parseQuery(){
+	var c = confirm("Your start and end point need to be of the form 'xy.z,ab.c'. Is that the case?");
+	if (!c)
+		return false;
+	var sPoint = $('#startPoint').val();
+	var ePoint = $('#endPoint').val();
+	return sendQuery(sPoint, ePoint);	
 }
+
 
 
 $(document).ready(init);
