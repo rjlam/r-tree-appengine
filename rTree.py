@@ -521,7 +521,6 @@ def printLeaves(n, depth=1):
 			printLeaves(e.getChild(), depth+1)
 
 def countEntries(n):
-	#print "LEN ", len(n.entries)
 	if n is None : 
 		return 0
 	if len(n.entries) == 0 : 
@@ -536,12 +535,26 @@ def countEntries(n):
 			result += countEntries(ent.getChild())
 	return result
 
+entryList = []	
+def getEntries(n):	
+	if n is None : 
+		return
+	if len(n.entries) == 0 : 
+		return
+	ent = Entry(n.entries[0].I, n.entries[0].nodeId, n.entries[0].child)
+	if ent.getChild() is None : 
+		for e in n.entries :
+			entryList.append(Entry(e.I, e.nodeId, e.child))
+	else :
+		for e in n.entries :
+			ent = Entry(e.I, e.nodeId, e.child)
+			getEntries(ent.getChild())
+	return
+	
 def insertFromTree(fname, tree):
-	#tree = RTree(12,6)
 	f = open(fname)
 	for line in f : 
 		xmin, ymin, xmax, ymax = map(float, line.strip().split("\t"))
-		#print xmin, ymin, xmax, ymax
 		r = Rect([xmin,ymin], [xmax, ymax])
 		rec = Entry(r)
 		tree.insertRecord(rec)

@@ -16,7 +16,80 @@ import bulkRTree
 import rTree
 
 JINJA_ENVIRONMENT = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
+###
 
+## these two functions can be used to visualize from a file ... will not be used down the
+## road, but it's good to have them around
+def parseFile(fn) : 
+	minX = 1000
+	minY = 1000
+	maxX = -1000
+	maxY = -1000
+	f = open(fn)
+	for line in f :
+		p = map(float, line.strip().split("\t"))
+		minX = min(minX, p[0])
+		maxX = max(maxX, p[2])
+		minY = min(minY, -p[3])
+		maxY = max(maxY, -p[1])	
+	f.close()
+	return (minX*(-1.0), minY*(-1.0), maxX, maxY)
+	
+def createRects(fn):
+	minX, minY, maxX, maxY = parseFile(fn)
+	print minX, minY, maxX, maxY
+	minX += 20
+	minY += 20
+	l = []
+	f = open(fn)
+	for line in f :
+		p = map(float, line.strip().split("\t"))
+		l.append([p[0]+minX, -p[1]+minY ,max(1,p[2]-p[0]),max(1,p[3]-p[1])])
+	f.close()
+	return l
+
+## these functions are used to actually visualize rectangles from the tree... 
+## for now visualize the entire tree, but we'll eventually just visualize the result set.	
+def parseTree() : 
+	meta = rTree.DBMetaData.get_by_key_name("metadata")
+	if meta is None :
+		return (None,None, None, None)
+	tree = rTree.RTree(None, None)
+	entries = []
+	rTree.entryList = []
+	rTree.getEntries(tree.root)
+	entries = rTree.entryList
+	minX = 1000
+	minY = 1000
+	maxX = -1000
+	maxY = -1000
+	for e in entries :
+		minX = min(minX, e.I.boundingBoxMin[0])
+		maxX = max(maxX, e.I.boundingBoxMax[0])
+		minY = min(minY, -e.I.boundingBoxMin[1])
+		maxY = max(maxY, -e.I.boundingBoxMax[1])	
+
+	return (minX*(-1.0), minY*(-1.0), maxX, maxY)
+	
+def createTreeRects():
+	minX, minY, maxX, maxY = parseTree()
+	if minX is None : 
+		return []
+	print minX, minY, maxX, maxY
+	minX += 20
+	minY += 20
+	l = []
+	tree = rTree.RTree(None, None)
+	rTree.entryList = [];
+	rTree.getEntries(tree.root)
+	entries = rTree.entryList
+	for e in entries : 
+		p = [e.I.boundingBoxMin[0],e.I.boundingBoxMin[1],e.I.boundingBoxMax[0],e.I.boundingBoxMax[1]]
+		l.append([p[0]+minX, -p[1]+minY ,max(1,p[2]-p[0]),max(1,p[3]-p[1])])
+	return l
+	
+	
+###
 # Datastore model to keep track of channels
 class ChannelPool(db.Model):
     client_id = db.StringProperty()
@@ -31,11 +104,18 @@ class HandleQuery(webapp.RequestHandler):
         sPoint = self.request.get('startPoint')
         ePoint = self.request.get('endPoint')
         message = self.getRectangles(sPoint, ePoint)
-        channel.send_message(client_id, message)
+        self.response.out.write(message);
+        #channel.send_message(client_id, message)
 
     def computePath(self, sPoint, ePoint, entryList):
-	    ## TODO: compute path from sPoint to ePoint using Entry objects in entryList
-	    return []
+        ## TODO: compute path from sPoint to ePoint using Entry objects in entryList
+        lst = createTreeRects()
+        print len(lst)
+        results = []
+        for item in lst : 
+           m = {"res":item}
+           results.append(m)
+        return results
         
     def getRectangles(self, sPoint, ePoint):
         # Hook into R-tree code here
@@ -67,9 +147,8 @@ class HandleQuery(webapp.RequestHandler):
         maxY = max(sParts[1], eParts[1])
         allRect = rTree.Entry(rTree.Rect([minX,minY],[maxX, maxY]))
         results = tree.search(allRect)
-        
         path = self.computePath(sPoint, ePoint, results)
-        message_template['rect'] = str(path)        
+        message_template['rect'] = path        
         return simplejson.dumps(message_template)
 		
 class DoBulkLoad(webapp.RequestHandler):

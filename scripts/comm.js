@@ -47,12 +47,64 @@ function updateChannel(play, endflag, num) {
 }
 
 
+function returnRectangles(lst){
+	console.log(lst)
+	
+	return false;	
+}
+
+
 /*
  * Communication back and forth between server and client
  * */
 // Send a query string to the server
 function sendQuery(sPoint, ePoint){
-	$.post('/send_query', {'client_id': client_id, 'startPoint': sPoint, 'endPoint': ePoint});
+	var sendData = {'client_id': client_id, 'startPoint': sPoint, 'endPoint': ePoint};
+	$.ajax({
+		async: false,
+		global: false,
+		url: '/send_query',
+		data: sendData,
+		type: 'POST',
+		dataType: "text",
+	  success: function(data) {
+		$("#dataCanvas").remove();
+		$("body").append("<canvas id='dataCanvas' width='300 height='300'></canvas>");
+		$("#messageDiv").empty();
+		var json = JSON.parse(data);
+		var lst = json.rect;
+		if (json.type == "error"){
+			console.log("There was a problem with your query input: "+json.message);
+			$("#messageDiv").append("There was a problem with your query input: "+json.message);
+			return false;
+		}
+		
+		if (json.type == "results"){			
+			$("#messageDiv").append("Your query was submitted successfully. Your number of results: "+json.rect.length);
+			var canvas = document.getElementById('dataCanvas')
+			var ctx = null;
+			if (canvas.getContext){
+				ctx = canvas.getContext('2d');
+			} else {
+				$("#messageDiv").append("Your browser does not support the canvas object. Cannot draw results.");
+				return false;
+			}
+			for (var i = 0; i < lst.length ; i++){
+				r = lst[i].res
+				ctx.rect(r[0],r[1],r[2],r[3]);		
+			}		
+			ctx.stroke();
+		} else {
+			console.log('Missing message.type');
+		}
+		
+		return false;
+	}
+	,
+	error: function(data) {
+		alert("error..." + data) ;
+	} 
+	});
 	return true;
 }
 
@@ -77,9 +129,9 @@ function handleServerMessage(message){
 	}
 	
 	if (message.type == 'results') {
-		console.log("Your query was submitted successfully. Your list of rectangles: "+message.rect);
-		$("#messageDiv").append("Your query was submitted successfully. Your list of rectangles: "+message.rect);
-		//returnRectangles(message.rect)
+		console.log("Your query was submitted successfully. Your number of results: "+message.rect);
+		$("#messageDiv").append("Your query was submitted successfully. Your number of results: "+message.rect);
+		returnRectangles(message.rect)
 		return;
 	}
 }
