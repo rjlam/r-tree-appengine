@@ -20,6 +20,10 @@ function parseQuery(){
 	return sendQuery(sPoint, ePoint);	
 }
 
-
+function setMsg(){
+	$("#messageDiv").empty();
+	$("#messageDiv").append("Now bulk loading RTree. This may take a while. Do not reload or interrupt this page.");
+	return false;
+}
 
 $(document).ready(init);

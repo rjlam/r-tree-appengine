@@ -21,7 +21,7 @@
 	<form id="bulk_load_form" name="bulk_load" method="post" action="/bulk_load">
 		<input type="hidden" name="client_id" value="{{ id }}"/>
 		<input type="hidden" name="server_token" value="{{ token }}"/>
-		<button onClick="$('#bulk_load_form').submit(); return false;">bulk load</button>
+		<button onClick="setMsg();$('#bulk_load_form').submit(); return false;">bulk load</button>
 	</form>
 	<p/>
 	<div id="messageDiv"></div>
