@@ -1,4 +1,3 @@
-import jinja2
 import datetime
 import string
 import random
@@ -7,10 +6,15 @@ import os
 from django.utils import simplejson
 
 from google.appengine.ext import webapp
+from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 
 from google.appengine.api import channel
 from google.appengine.ext import db
+from google.appengine.ext import blobstore
+from google.appengine.ext.webapp import blobstore_handlers
+
+from rTree import *
 
 import bulkRTree
 import rTree
@@ -120,6 +124,46 @@ class ChannelPool(db.Model):
     token = db.StringProperty()
     in_use = db.BooleanProperty()
     expire = db.DateTimeProperty()
+    
+class RTreeInterface :
+    tree = None
+    
+    def __init__(self):
+        pageSize = 100
+        minEntries = 50
+        
+        meta = DBMetaData.get_by_key_name("metadata")
+        if not meta:
+            tree = RTree(pageSize, minEntries)
+            tree.save()
+        else:
+            tree = RTree(None, None)
+            
+    def getRectString(self, queryString):
+        # Parse string here. Can be changed depending on input string we expect.
+        # Expected string = x1, y1, x2, y2
+        coord = queryString.strip().split(string.whitespace.join(','))
+        if len(coord) != 4:
+            return None
+        
+        x1 = coord[0]
+        y1 = coord[1]
+        x2 = coord[2]
+        y2 = coord[3]
+        
+        searchRec = Entry(Rect[x1, y1], [x2, y2])
+        results = self.tree.search(searchRec)
+        print results
+    
+        message_template = {
+            'type': 'results',
+            'rect': results     # will be a list of rectangles
+        }
+        return simplejson.dumps(message_template)
+    
+    def load(self, blob_info):
+        blob_reader = blobstore.BlobReader(blob_info)
+        insertFromTree(blob_reader, self.tree)
 
 class HandleQuery(webapp.RequestHandler):
     def post(self):
@@ -264,5 +308,5 @@ def main():
     run_wsgi_app(app)
 
 
-if __name__ == "__main__":
-    main()
+#if __name__ == "__main__":
+#    main()

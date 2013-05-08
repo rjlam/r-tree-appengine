@@ -558,7 +558,7 @@ def insertFromTree(fname, tree):
 		r = Rect([xmin,ymin], [xmax, ymax])
 		rec = Entry(r)
 		tree.insertRecord(rec)
-	f.close()		
+	blob_reader.close()		
 
 
 	
