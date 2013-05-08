@@ -54,6 +54,7 @@ def parseTree() :
 	meta = rTree.DBMetaData.get_by_key_name("metadata")
 	if meta is None :
 		return (None,None, None, None)
+	scalingFactor = 1
 	tree = rTree.RTree(None, None)
 	entries = []
 	rTree.entryList = []
@@ -64,10 +65,10 @@ def parseTree() :
 	maxX = -1000
 	maxY = -1000
 	for e in entries :
-		minX = min(minX, e.I.boundingBoxMin[0])
-		maxX = max(maxX, e.I.boundingBoxMax[0])
-		minY = min(minY, -e.I.boundingBoxMin[1])
-		maxY = max(maxY, -e.I.boundingBoxMax[1])	
+		minX = min(minX, scalingFactor*e.I.boundingBoxMin[0])
+		maxX = max(maxX, scalingFactor*e.I.boundingBoxMax[0])
+		minY = min(minY, scalingFactor*-e.I.boundingBoxMin[1])
+		maxY = max(maxY, scalingFactor*-e.I.boundingBoxMax[1])	
 
 	return (minX*(-1.0), minY*(-1.0), maxX, maxY)
 	
@@ -75,6 +76,7 @@ def createTreeRects():
 	minX, minY, maxX, maxY = parseTree()
 	if minX is None : 
 		return []
+	scalingFactor = 1
 	print minX, minY, maxX, maxY
 	minX += 20
 	minY += 20
@@ -85,9 +87,31 @@ def createTreeRects():
 	entries = rTree.entryList
 	for e in entries : 
 		p = [e.I.boundingBoxMin[0],e.I.boundingBoxMin[1],e.I.boundingBoxMax[0],e.I.boundingBoxMax[1]]
-		l.append([p[0]+minX, -p[1]+minY ,max(1,p[2]-p[0]),max(1,p[3]-p[1])])
-	return l
-	
+		l.append([(scalingFactor*p[0])+minX, (scalingFactor*-p[1])+minY ,max(1,p[2]-p[0]),max(1,p[3]-p[1])])
+	return (l, minX, minY)
+
+# normalize a list of entries and scale by a scaling factor
+def normalizeList(entries):
+	l = []
+	minX = 1000
+	minY = 1000
+	maxX = -1000
+	maxY = -1000
+	scalingFactor = 100
+	for e in entries :
+		minX = min(minX, scalingFactor*e.I.boundingBoxMin[0])
+		maxX = max(maxX, scalingFactor*e.I.boundingBoxMax[0])
+		minY = min(minY, scalingFactor*(-e.I.boundingBoxMin[1]))
+		maxY = max(maxY, scalingFactor*(-e.I.boundingBoxMax[1]))
+	minX *= -1.0
+	minY *= -1.0
+	minX += 20
+	minY += 20
+	for e in entries : 
+		p = [e.I.boundingBoxMin[0],e.I.boundingBoxMin[1],e.I.boundingBoxMax[0],e.I.boundingBoxMax[1]]
+		l.append([(scalingFactor*p[0])+minX, (scalingFactor*(-p[1]))+minY ,max(1,p[2]-p[0]),max(1,p[3]-p[1])])
+	return (l, minX, minY)
+		
 	
 ###
 # Datastore model to keep track of channels
@@ -109,13 +133,15 @@ class HandleQuery(webapp.RequestHandler):
 
     def computePath(self, sPoint, ePoint, entryList):
         ## TODO: compute path from sPoint to ePoint using Entry objects in entryList
-        lst = createTreeRects()
-        print len(lst)
+        #lst, mx, my = createTreeRects()
+        # for now just normalize list and scale
+        lst, mx, my = normalizeList(entryList)
+        print "Number results:" ,len(lst)		
         results = []
         for item in lst : 
            m = {"res":item}
            results.append(m)
-        return results
+        return (results, mx, my)
         
     def getRectangles(self, sPoint, ePoint):
         # Hook into R-tree code here
@@ -147,8 +173,9 @@ class HandleQuery(webapp.RequestHandler):
         maxY = max(sParts[1], eParts[1])
         allRect = rTree.Entry(rTree.Rect([minX,minY],[maxX, maxY]))
         results = tree.search(allRect)
-        path = self.computePath(sPoint, ePoint, results)
+        path, mx, my = self.computePath(sPoint, ePoint, results)
         message_template['rect'] = path        
+        message_template['minVals'] = {'mx':mx, 'my':my}
         return simplejson.dumps(message_template)
 		
 class DoBulkLoad(webapp.RequestHandler):
@@ -157,8 +184,9 @@ class DoBulkLoad(webapp.RequestHandler):
 		meta = rTree.DBMetaData.get_by_key_name("metadata")
 		if meta is None : 
 			rtree = bulkRTree.RTree(100, 50)
-			fn = "USclpoint.fnl"
+			fn = "CaStreet.ascii.10k" #"USclpoint.fnl"
 			bulkRTree.insertFromTree(fn, rtree)
+			print "Now saving to database."
 			rtree.save()
 			msg = "RTree bulk loading completed."
 		else :
