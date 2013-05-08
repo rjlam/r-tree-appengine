@@ -64,7 +64,15 @@ function sendQuery(sPoint, ePoint){
 			return false;
 		}
 		
-		if (json.type == "results"){			
+		if (json.type == "results"){
+			var sp = sPoint.split(",")
+			var scaleFactor = 100;
+			sp[0] = scaleFactor*parseFloat(sp[0]) + parseFloat(json.minVals["mx"]);	
+			sp[1] = (scaleFactor*-1.0*parseFloat(sp[1])) + parseFloat(json.minVals["my"]);	
+			var ep = ePoint.split(",")
+			ep[0] = scaleFactor*parseFloat(ep[0]) + parseFloat(json.minVals["mx"]);
+			ep[1] = (scaleFactor*-1.0 * parseFloat(ep[1])) +  parseFloat(json.minVals["my"]);
+			
 			$("#messageDiv").append("Your query was submitted successfully. Your number of results: "+json.rect.length);
 			var canvas = document.getElementById('dataCanvas')
 			var ctx = null;
@@ -77,8 +85,12 @@ function sendQuery(sPoint, ePoint){
 			for (var i = 0; i < lst.length ; i++){
 				r = lst[i].res
 				ctx.rect(r[0],r[1],r[2],r[3]);		
-			}		
+			}
 			ctx.stroke();
+			// mark start and end in red
+			ctx.fillStyle="#FF0000";
+			ctx.fillRect(sp[0], sp[1], 2,2);		
+			ctx.fillRect(ep[0], ep[1], 2,2);
 		} else {
 			console.log('Missing message.type');
 		}
