@@ -26,9 +26,10 @@ class Rect :
 	boundingBoxMin = []
 	boundingBoxMax = []
 	
-	def __init__(self):
-		self.boundingBoxMin = []
-		self.boundingBoxMax = []
+#	Multiple constructors not allowed in python?
+#	def __init__(self):
+#		self.boundingBoxMin = []
+#		self.boundingBoxMax = []
 		
 	def __init__(self, minVals, maxVals):
 		self.boundingBoxMin = []
@@ -528,16 +529,14 @@ def countEntries(n):
 			result += countEntries(e.getChild())
 	return result
 
-def insertFromTree(fname, tree):
-	#tree = RTree(12,6)
-	f = open(fname)
-	for line in f : 
+def insertFromTree(blob_reader, tree):
+	for line in blob_reader : 
 		xmin, ymin, xmax, ymax = map(float, line.strip().split("\t"))
 		#print xmin, ymin, xmax, ymax
 		r = Rect([xmin,ymin], [xmax, ymax])
 		rec = Entry(r)
 		tree.insertRecord(rec)
-	f.close()		
+	blob_reader.close()		
 
 
 	
