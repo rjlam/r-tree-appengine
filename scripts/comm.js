@@ -54,7 +54,7 @@ function sendQuery(sPoint, ePoint){
 		dataType: "text",
 	  success: function(data) {
 		$("#dataCanvas").remove();
-		$("#canvas").append("<canvas id='dataCanvas' width='300 height='300'></canvas>");
+		$("#canvas").append("<canvas id='dataCanvas' width='300' height='300'></canvas>");
 		$("#messageDiv").empty();
 		var json = JSON.parse(data);
 		var lst = json.rect;
