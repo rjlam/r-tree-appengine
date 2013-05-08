@@ -223,7 +223,7 @@ class MainPage(webapp.RequestHandler):
             token = channel.create_channel(client_id, duration_minutes = 1440)
             expire = datetime.datetime.now() + datetime.timedelta(0, 1440)
             
-            ch = ChannelPool(key_name = client_id, token=token, in_use=True, expire=expire)
+            ch = ChannelPool(key_name = client_id, client_id=client_id, token=token, in_use=True, expire=expire)
             ch.put()
         else:
             now = datetime.datetime.now()
@@ -242,14 +242,11 @@ class MainPage(webapp.RequestHandler):
                 token = channel.create_channel(client_id, duration_minutes = 1440)
                 expire = datetime.datetime.now() + datetime.timedelta(0, 1440)
                 
-                ch = ChannelPool(key_name = client_id, token=token, in_use=True, expire=expire)
+                ch = ChannelPool(key_name = client_id, client_id=client_id, token=token, in_use=True, expire=expire)
                 ch.put()        
         template_values = {'token': token,
                            'id': client_id
                            }
-        template = jinja2.Environment.get_template('index.html')
-        self.response.out.write(template.render(template_values))
-        self.response.out.write()
 
         template = JINJA_ENVIRONMENT.get_template('index.html')        
         self.response.out.write(template.render(template_values))
