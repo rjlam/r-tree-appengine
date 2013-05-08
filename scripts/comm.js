@@ -91,6 +91,7 @@ function sendQuery(sPoint, ePoint){
 			ctx.fillStyle="#FF0000";
 			ctx.fillRect(sp[0], sp[1], 2,2);		
 			ctx.fillRect(ep[0], ep[1], 2,2);
+			$("#status").dialog( "close" );
 		} else {
 			console.log('Missing message.type');
 		}

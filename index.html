@@ -1,7 +1,9 @@
 <html>
 <head>
 	<link rel="stylesheet" type="text/css" href="/style/style.css"></link>
-	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="/style/jquery-ui-1.10.3.custom.css"></link>
+	<script type="text/javascript" src="/scripts/jquery-1.9.1.js"></script>
+	<script type="text/javascript" src="/scripts/jquery-ui-1.10.3.custom.min.js"></script>
 	<script type="text/javascript" src="/_ah/channel/jsapi"></script>
 	<script type="text/javascript" src="/scripts/main.js"></script>
 	<script type="text/javascript" src="/scripts/comm.js"></script>
@@ -21,27 +23,31 @@
 	will be populated in the chart below. Points should be of the 
 	form ##.#, ##.#. The bottom left coordinate is ##.#, ##.# and
 	the top right coordinate is ##.#, ##.#.</p>
-	<form name="query_box" method="post" onsubmit="parseQuery();return false;">
+	<form name="query_box" id="query_box_form" method="post" onsubmit="parseQuery();return false;">
 		Start point: <input type="text" name="startPoint" id="startPoint"> <br/>
 		End point: <input type="text" name="endPoint" id="endPoint"><br/>
 		<input type="hidden" name="client_id" value="{{ id }}"/>
 		<input type="hidden" name="server_token" value="{{ token }}"/>
-		<input type="submit" name="submit" class="button">
+		<input type="submit" name="submit" class="button" onClick="$('#query_box_form').submit();return false;">
 	</form>
 	
 	<!--TODO: Make this become invisible if bulk load is done?-->
-	<p>To bulk load data on the roads in North America into the datastore, click on the below button:</p>
+	<div class="{{ showBulk }}">
+	<p>To bulk load data on the roads in California into the datastore, click on the below button:</p>
 	<form id="bulk_load_form" name="bulk_load" method="post" action="/bulk_load">
 		<input type="hidden" name="client_id" value="{{ id }}"/>
 		<input type="hidden" name="server_token" value="{{ token }}"/>
 		<button onClick="setMsg();$('#bulk_load_form').submit(); return false;" class="button">Bulk Load Data</button>
 	</form>
+	</div>
 	<p/>
 	<div id="messageDiv"></div>
 	<p/>
 	<div id="canvas">
 		<canvas id="dataCanvas" width="300" height="300"></canvas>
 	</div>
+	<div id="status" style="display:none"></div>
+	<div id="confirm" style="display:none"></div>
 </div>
 </body>
 </html>

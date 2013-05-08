@@ -243,9 +243,14 @@ class MainPage(webapp.RequestHandler):
                 expire = datetime.datetime.now() + datetime.timedelta(0, 1440)
                 
                 ch = ChannelPool(key_name = client_id, client_id=client_id, token=token, in_use=True, expire=expire)
-                ch.put()        
+                ch.put() 
+        showBulk = "visible"
+        meta = rTree.DBMetaData.get_by_key_name("metadata")
+        if meta is not None :       
+            showBulk = "invisible"
         template_values = {'token': token,
-                           'id': client_id
+                           'id': client_id,
+                           'showBulk': showBulk
                            }
 
         template = JINJA_ENVIRONMENT.get_template('index.html')        
