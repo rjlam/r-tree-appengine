@@ -147,8 +147,8 @@ class HandleQuery(webapp.RequestHandler):
         # Hook into R-tree code here
         message_template = {
             'type': 'error',
-            'message': 'ok',  # will be a list of rectangles
-            'rect': '[]'
+            'message': 'ok',  
+            'rect': '[]' # will be a list of rectangles
         }
         meta = rTree.DBMetaData.get_by_key_name("metadata")
         if meta is None :	
@@ -183,9 +183,9 @@ class DoBulkLoad(webapp.RequestHandler):
 		msg = "No bulk loading to do"
 		meta = rTree.DBMetaData.get_by_key_name("metadata")
 		if meta is None : 
-			rtree = bulkRTree.RTree(100, 50)
-			fn = "CaStreet.ascii.10k" #"USclpoint.fnl"
-			bulkRTree.insertFromTree(fn, rtree)
+			fn = "RTree.pickled" 
+			#fn = "CaStreet.ascii.10k" #"USclpoint.fnl"
+			rtree = bulkRTree.insertFromPickle(fn)
 			print "Now saving to database."
 			rtree.save()
 			msg = "RTree bulk loading completed."

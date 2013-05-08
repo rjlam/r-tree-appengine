@@ -4,6 +4,7 @@ from Queue import Queue
 from google.appengine.api import memcache, users
 from google.appengine.ext import db, webapp
 import cPickle
+import time
 
 class Rect :
 	boundingBoxMin = []
@@ -373,7 +374,16 @@ class RTree :
 					print self.root.entries[0].child
 		for n in allNodes : 
 			n.save()
-		self.save()			 			
+		self.save()	
+		
+	def doLoad(self, fn) : 
+		f = open(fn)
+		data = f.read()
+		f.close()	
+		#data = cPickle.dumps(self)
+		cPickle.loads(data)
+		#self = tree
+			 			
 			
 
 def countEntries(n):
@@ -396,7 +406,29 @@ def insertFromTree(fname, tree):
 		r = Rect([xmin,ymin], [xmax, ymax])
 		rec = Entry(r)
 		tree.insertRecord(rec)
-	f.close()	
+	f.close()
+	
+def insertFromPickle(fname) :
+	f = open(fname, "r")
+	data = f.read()
+	f.close()
+	tree = cPickle.loads(data)
+	return tree
 
 
-				
+def insertMain(fn) : 
+	tree = RTree(100, 50)
+	insertFromTree(fn, tree)
+	print "Done inserting .. now pickling.. "
+	f = open("RTree.pickled", "w")
+	cPickle.dump(tree, f)
+	f.close()
+	print "all done"
+
+def loadMain():
+	f = open("RTree.pickled", "r")
+	tree = cPickle.load(f)
+	f.close()
+	r = countEntries(tree.root)
+	print r
+	
