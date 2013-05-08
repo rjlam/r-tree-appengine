@@ -26,9 +26,9 @@ class Rect :
 	boundingBoxMin = []
 	boundingBoxMax = []
 	
-	def __init__(self):
-		self.boundingBoxMin = []
-		self.boundingBoxMax = []
+#	def __init__(self):
+#		self.boundingBoxMin = []
+#		self.boundingBoxMax = []
 		
 	def __init__(self, minVals, maxVals):
 		self.boundingBoxMin = []

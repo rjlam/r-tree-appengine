@@ -5,6 +5,8 @@ api_version: 1
 threadsafe: yes
 
 handlers:    
+- url: /style
+  static_dir: style
 - url: /scripts
   static_dir: scripts
   

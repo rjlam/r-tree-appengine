@@ -32,21 +32,6 @@ channelOnClose = function() {
 	console.log('channel closed');
 }
 
-/*
-Updates channel when user is host
-*/
-function updateChannel(play, endflag, num) {
-	console.log('updateChannel: ' + server_session_key + ', ' + hostingIndex + ', ' + play + ', ' + endflag + ', ' + num);
-
-	$.post('/get',
-		{'session_key': server_session_key, 'curIdx': hostingIndex, 'play': play, 'endflag': endflag, 'num': num},
-		function(message) {
-			console.log('/update response:' + message);
-		}
-	);
-}
-
-
 function returnRectangles(lst){
 	console.log(lst)
 	
@@ -69,7 +54,7 @@ function sendQuery(sPoint, ePoint){
 		dataType: "text",
 	  success: function(data) {
 		$("#dataCanvas").remove();
-		$("body").append("<canvas id='dataCanvas' width='300 height='300'></canvas>");
+		$("#canvas").append("<canvas id='dataCanvas' width='300 height='300'></canvas>");
 		$("#messageDiv").empty();
 		var json = JSON.parse(data);
 		var lst = json.rect;

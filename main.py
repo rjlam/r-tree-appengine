@@ -233,7 +233,7 @@ def getID():
     return ''.join(random.choice(chars) for x in range(10))
 
 def main():
-    run_wsgi_app(application)
+    run_wsgi_app(app)
 
 
 if __name__ == "__main__":
