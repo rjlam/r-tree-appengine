@@ -193,7 +193,7 @@ class DoBulkLoad(webapp.RequestHandler):
 			print msg
 			
 		template_values = {'id': self.request.get('client_id'), 'token': self.request.get('server_token'), 'message':msg}
-		template = JINJA_ENVIRONMENT.get_template('loaded.html')		
+		template = JINJA_ENVIRONMENT.get_template('index.html')		
 		self.response.out.write(template.render(template_values))
 		
 	def get(self):		

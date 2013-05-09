@@ -38,6 +38,27 @@ function returnRectangles(lst){
 	return false;	
 }
 
+function bulkLoadData(){
+	console.log("loading data");
+	$.ajax({
+		async: false,
+		global: false,
+		url: '/bulk_load',
+		type: 'POST',
+		dataType: "text",
+	  	success: function(data) {
+			$("#status").dialog( "close" );
+			$("#messageDiv").html("Bulk loading completed successfully!");
+			$("#loadDiv").hide();
+			return false;
+		},
+		error: function(data) {
+			showStatus("Bulk loading failed: "+data);
+			return false;
+		}		
+	});
+	return false;
+}
 
 /*
  * Communication back and forth between server and client
@@ -61,6 +82,7 @@ function sendQuery(sPoint, ePoint){
 		if (json.type == "error"){
 			console.log("There was a problem with your query input: "+json.message);
 			$("#messageDiv").append("There was a problem with your query input: "+json.message);
+			$("#status").dialog( "close" );
 			return false;
 		}
 		
@@ -91,11 +113,10 @@ function sendQuery(sPoint, ePoint){
 			ctx.fillStyle="#FF0000";
 			ctx.fillRect(sp[0], sp[1], 2,2);		
 			ctx.fillRect(ep[0], ep[1], 2,2);
-			$("#status").dialog( "close" );
 		} else {
 			console.log('Missing message.type');
 		}
-		
+		$("#status").dialog( "close" );
 		return false;
 	}
 	,

@@ -10,8 +10,10 @@ function init(){
 	initialized = true;
 }
 
-function showStatus(){
+function showStatus(msg){
 	$( "#status" ).html("Please stand by while your query is being processed...");
+	if (msg != null)
+		$( "#status" ).html(msg);
 	$( "#status" ).dialog({
 	                        width:450,
 	                        modal: true,

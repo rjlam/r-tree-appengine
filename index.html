@@ -32,12 +32,12 @@
 	</form>
 	
 	<!--TODO: Make this become invisible if bulk load is done?-->
-	<div class="{{ showBulk }}">
+	<div id="loadDiv" class="{{ showBulk }}">
 	<p>To bulk load data on the roads in California into the datastore, click on the below button:</p>
-	<form id="bulk_load_form" name="bulk_load" method="post" action="/bulk_load">
+	<form id="bulk_load_form" name="bulk_load" method="post">
 		<input type="hidden" name="client_id" value="{{ id }}"/>
 		<input type="hidden" name="server_token" value="{{ token }}"/>
-		<button onClick="setMsg();$('#bulk_load_form').submit(); return false;" class="button">Bulk Load Data</button>
+		<button onClick="setMsg();showStatus('Please stand by while the data is being loaded. This may take a while...');setTimeout(bulkLoadData,1000);return false;" class="button">Bulk Load Data</button>
 	</form>
 	</div>
 	<p/>
