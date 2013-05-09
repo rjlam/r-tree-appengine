@@ -78,6 +78,7 @@ function sendQuery(sPoint, ePoint){
 		$("#messageDiv").empty();
 		var json = JSON.parse(data);
 		var lst = json.rect;
+		var glst = json.grect;
 		if (json.type == "error"){
 			console.log("There was a problem with your query input: "+json.message);
 			$("#messageDiv").append("There was a problem with your query input: "+json.message);
@@ -87,14 +88,15 @@ function sendQuery(sPoint, ePoint){
 		
 		if (json.type == "results"){
 			var sp = sPoint.split(",")
-			var scaleFactor = 100;
-			sp[0] = scaleFactor*parseFloat(sp[0]) + parseFloat(json.minVals["mx"]);	
-			sp[1] = (scaleFactor*-1.0*parseFloat(sp[1])) + parseFloat(json.minVals["my"]);	
-			var ep = ePoint.split(",")
-			ep[0] = scaleFactor*parseFloat(ep[0]) + parseFloat(json.minVals["mx"]);
-			ep[1] = (scaleFactor*-1.0 * parseFloat(ep[1])) +  parseFloat(json.minVals["my"]);
-			
-			$("#messageDiv").append("Your query was submitted successfully. Your number of results: "+json.rect.length);
+			var scaleFactor = 500;
+			//sp[0] = scaleFactor*parseFloat(sp[0]) + parseFloat(json.minVals["mx"]);	
+			sp[0] = scaleFactor*parseFloat(json.sp.x) + parseFloat(json.minVals["mx"]);	
+			//sp[1] = (scaleFactor*-1.0*parseFloat(sp[1])) + parseFloat(json.minVals["my"]);	
+			sp[1] = (scaleFactor*-1.0*parseFloat(json.sp.y)) + parseFloat(json.minVals["my"]);	
+			var ep = ePoint.split(",");
+			ep[0] = scaleFactor*parseFloat(json.ep.x) + parseFloat(json.minVals["mx"]);
+			ep[1] = (scaleFactor*-1.0 * parseFloat(json.ep.y)) +  parseFloat(json.minVals["my"]);
+						
 			var canvas = document.getElementById('dataCanvas')
 			var ctx = null;
 			if (canvas.getContext){
@@ -103,15 +105,35 @@ function sendQuery(sPoint, ePoint){
 				$("#messageDiv").append("Your browser does not support the canvas object. Cannot draw results.");
 				return false;
 			}
-			for (var i = 0; i < lst.length ; i++){
-				r = lst[i].res
+			ctx.beginPath();
+			for (var i = 0; i < glst.length ; i++){
+				r = glst[i].res
 				ctx.rect(r[0],r[1],r[2],r[3]);		
 			}
 			ctx.stroke();
+			
+			if (lst.length > 1) {
+				$("#messageDiv").append("Your query was submitted successfully. Your number of results: "+json.rect.length);
+				ctx.beginPath();
+				ctx.strokeStyle="#00FF00";
+				for (var i = 0; i < lst.length ; i++){
+					r = lst[i].res
+					ctx.rect(r[0],r[1],r[2],r[3]);		
+				}
+				ctx.stroke();
+			} else {
+				$("#messageDiv").append("Your query was submitted successfully. No route can be found between your start and destination points.");
+			}
 			// mark start and end in red
+			ctx.beginPath();
 			ctx.fillStyle="#FF0000";
-			ctx.fillRect(sp[0], sp[1], 2,2);		
-			ctx.fillRect(ep[0], ep[1], 2,2);
+			ctx.moveTo(sp[0], sp[1]);
+			ctx.arc(sp[0], sp[1],2,0,Math.PI*2,true);
+			ctx.moveTo(ep[0], ep[1]);
+			ctx.arc(ep[0], ep[1],2,0,Math.PI*2,true);
+			ctx.fill();
+			//ctx.fillRect(sp[0], sp[1], 2,2);		
+			//ctx.fillRect(ep[0], ep[1], 2,2);
 		} else {
 			console.log('Missing message.type');
 		}

@@ -57,6 +57,11 @@ class Rect :
 			self.boundingBoxMin[i] = min(self.boundingBoxMin[i],r.boundingBoxMin[i])
 			self.boundingBoxMax[i] = max(self.boundingBoxMax[i],r.boundingBoxMax[i])
 
+	# added to make graph work.
+	def __hash__(self):
+		return hash((tuple(self.boundingBoxMin), tuple(self.boundingBoxMax)))
+
+
 #########
 class DBNode(db.Model):
 	size = db.IntegerProperty()

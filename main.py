@@ -15,6 +15,8 @@ from google.appengine.ext import db
 import bulkRTree
 import rTree
 
+from path import *
+
 JINJA_ENVIRONMENT = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
 ###
 
@@ -91,26 +93,59 @@ def createTreeRects():
 	return (l, minX, minY)
 
 # normalize a list of entries and scale by a scaling factor
-def normalizeList(entries):
+def normalizeList(entries, entries2 = None):
 	l = []
-	minX = 1000
-	minY = 1000
-	maxX = -1000
-	maxY = -1000
-	scalingFactor = 100
+	minX = 100000
+	minY = 100000
+	maxX = -100000
+	maxY = -100000
+	scalingFactor = 500
+	isRect = None
 	for e in entries :
-		minX = min(minX, scalingFactor*e.I.boundingBoxMin[0])
-		maxX = max(maxX, scalingFactor*e.I.boundingBoxMax[0])
-		minY = min(minY, scalingFactor*(-e.I.boundingBoxMin[1]))
-		maxY = max(maxY, scalingFactor*(-e.I.boundingBoxMax[1]))
+		r = e
+		if isRect is None : 
+			try : 
+				r = e.I
+				isRect = False
+			except : 
+				r = e
+				isRect = True
+		elif not isRect : 
+			r = e.I
+		minX = min(minX, scalingFactor*r.boundingBoxMin[0])
+		maxX = max(maxX, scalingFactor*r.boundingBoxMax[0])
+		minY = min(minY, scalingFactor*(-r.boundingBoxMin[1]))
+		maxY = max(maxY, scalingFactor*(-r.boundingBoxMax[1]))
 	minX *= -1.0
 	minY *= -1.0
 	minX += 20
 	minY += 20
 	for e in entries : 
-		p = [e.I.boundingBoxMin[0],e.I.boundingBoxMin[1],e.I.boundingBoxMax[0],e.I.boundingBoxMax[1]]
-		l.append([(scalingFactor*p[0])+minX, (scalingFactor*(-p[1]))+minY ,max(1,p[2]-p[0]),max(1,p[3]-p[1])])
-	return (l, minX, minY)
+		r = e
+		if not isRect : 
+			r = e.I
+		p = [r.boundingBoxMin[0],r.boundingBoxMin[1],r.boundingBoxMax[0],r.boundingBoxMax[1]]
+		l.append([(scalingFactor*p[0])+minX, (scalingFactor*(-p[1]))+minY ,max(2,p[2]-p[0]),max(2,p[3]-p[1])])
+	
+	if entries2 is not None : 
+		l2 = []
+		isRect = None
+		for e in entries2 : 
+			r = e
+			if isRect is None : 
+				try : 
+					r = e.I
+					isRect = False
+				except : 
+					r = e
+					isRect = True
+			if not isRect : 
+				r = e.I
+			p = [r.boundingBoxMin[0],r.boundingBoxMin[1],r.boundingBoxMax[0],r.boundingBoxMax[1]]
+			l2.append([(scalingFactor*p[0])+minX, (scalingFactor*(-p[1]))+minY ,max(5,p[2]-p[0]),max(5,p[3]-p[1])])
+		return (l,l2, minX, minY)
+	else : 
+		return (l, minX, minY)
 		
 	
 ###
@@ -131,17 +166,23 @@ class HandleQuery(webapp.RequestHandler):
         self.response.out.write(message);
         #channel.send_message(client_id, message)
 
-    def computePath(self, sPoint, ePoint, entryList):
+    def computePath(self, sPoint, ePoint, rtree, entryList):
         ## TODO: compute path from sPoint to ePoint using Entry objects in entryList
         #lst, mx, my = createTreeRects()
         # for now just normalize list and scale
-        lst, mx, my = normalizeList(entryList)
+        #lst, mx, my = normalizeList(entryList)
+        resEntries = PathSearch(sPoint, ePoint, rtree, entryList)
+        lst, lst2, mx, my = normalizeList(entryList, resEntries)
         print "Number results:" ,len(lst)		
         results = []
         for item in lst : 
            m = {"res":item}
            results.append(m)
-        return (results, mx, my)
+        results2 = []
+        for item in lst2 : 
+           m = {"res":item}
+           results2.append(m)
+        return (results,results2, mx, my)
         
     def getRectangles(self, sPoint, ePoint):
         # Hook into R-tree code here
@@ -171,11 +212,16 @@ class HandleQuery(webapp.RequestHandler):
         minY = min(sParts[1], eParts[1])
         maxX = max(sParts[0], eParts[0])
         maxY = max(sParts[1], eParts[1])
+        sEntry = make_leaf(rTree.Rect([sParts[0],sParts[1]],[sParts[0], sParts[1]]), tree)
+        eEntry = make_leaf(rTree.Rect([eParts[0],eParts[1]],[eParts[0], eParts[1]]), tree) 
         allRect = rTree.Entry(rTree.Rect([minX,minY],[maxX, maxY]))
         results = tree.search(allRect)
-        path, mx, my = self.computePath(sPoint, ePoint, results)
+        gRect, path, mx, my = self.computePath(sEntry, eEntry, tree, results)
         message_template['rect'] = path        
+        message_template['grect'] = gRect
         message_template['minVals'] = {'mx':mx, 'my':my}
+        message_template['sp'] = {'x':sEntry.I.boundingBoxMin[0], 'y':sEntry.I.boundingBoxMin[1]}
+        message_template['ep'] = {'x':eEntry.I.boundingBoxMin[0], 'y':eEntry.I.boundingBoxMin[1]}
         return simplejson.dumps(message_template)
 		
 class DoBulkLoad(webapp.RequestHandler):
