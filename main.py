@@ -180,6 +180,7 @@ class HandleQuery(webapp.RequestHandler):
 		
 class DoBulkLoad(webapp.RequestHandler):
 	def post(self):
+		showBulk = "invisible"
 		msg = "No bulk loading to do"
 		meta = rTree.DBMetaData.get_by_key_name("metadata")
 		if meta is None : 
@@ -192,7 +193,7 @@ class DoBulkLoad(webapp.RequestHandler):
 		else :
 			print msg
 			
-		template_values = {'id': self.request.get('client_id'), 'token': self.request.get('server_token'), 'message':msg}
+		template_values = {'id': self.request.get('client_id'), 'token': self.request.get('server_token'), 'showBulk': showBulk,'message':msg}
 		template = JINJA_ENVIRONMENT.get_template('index.html')		
 		self.response.out.write(template.render(template_values))
 		
