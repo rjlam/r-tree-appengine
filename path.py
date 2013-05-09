@@ -137,8 +137,8 @@ def shortest_path(graph, w, s, t):
         dist[v] = float("inf")
  
     dist[s] = 0
-    Q = map (lambda k : (dist[k], k), graph.keys())
-    #Q = list(graph.keys())[:]
+    #Q = map (lambda k : (dist[k], k), graph.keys())
+    Q = list(graph.keys())[:]
 
     while len(Q) > 0:
         u = mindist(Q,dist)
@@ -162,7 +162,7 @@ print "??????????????????????"
 def extract_path(p, s, t):
     print len(p)
     toprint = t
-    #i = 0
+    i = 0
     while toprint != s:
 	i += 1
         print_rect(toprint)
@@ -172,7 +172,7 @@ def extract_path(p, s, t):
 	else:
 		break
     #print_rect(s)
-    #print i
+    print i
 
 #extract_path(shortest_path(test_graph, test_w, 1, 5), 1, 5)
 
