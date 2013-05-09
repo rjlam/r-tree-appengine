@@ -1,0 +1,54 @@
+We built a small navigation application on top of the R-tree interface.
+Given two points, if they are connected by roads, the application returns the list of rectangles which comprise (approximately) the shortest path.
+We say approximately because the ``distance'' between two roads is simply the size of the one you're currently on---this design decision was purely due to time and technical limitations.
+What were the reasons for developing this particular application?
+
+An immediate motivation is that navigation applications are a well-known, simple spatial query that is rather interesting.
+Moreover, shortest-path algorithms (in our case, Dijkstra's) are extremely well-known, but they are not often presented in a distributed setting.
+Implementing Dijkstra's ``on top of'' a Google app-engine R-tree was an educative foray into distributed graph queries.
+We already know the graph is extremely well-behaved: the data being spatial means that the distance between nodes obeys many nice constraints, such as the triangle inequality (our distance approximation notwithstanding).
+Our algorithm can be understood by two subroutines.
+The main one, algorithm \ref{alg:findpath}, takes two points, generates an appropriate graph, and then searches the graph for the best path.
+The details involved in ``generating an appropriate graph'' are shown in algorithm \ref{alg:buildgraph}.
+
+\begin{algorithm}
+\caption{BuildGraph: An algorithm to build a search graph using an R-tree.}\label{alg:buildgraph}
+\KwData{An R-Tree $R$ and two leaves $\ell_s$, $\ell_t$.}
+\KwResult{A graph $G$ to help compute a path between $\ell_s$, $\ell_t$.}
+$M\longleftarrow\text{ComputeMBR}(s,t)$ // $M$ is the minimum bounding rectangle on the leaves\;
+$\mathcal S\longleftarrow\text{Search}(R,M)$ // $\mathcal S$ is the set of rectangles touched by $M$\;
+$V\longleftarrow\{\ell\mid\ell\in\mathcal S\}$ // Our graph has vertex-set $V$ indexed by each $\ell\in\mathcal S$\;
+$E\longleftarrow\{(u,v)\mid \ell_u\cap\ell_v\neq\emptyset\}$ // If two leaves overlap, they are connected in $G$. This can be efficiently computed through $\text{Search}(R,u)$ calls\;
+$W$ maps $(u,v)$ to $\text{area}(u)$: that edge has weight equal to the area of the outgoing road\;
+\Return $G=(V,E,W)$\;
+\end{algorithm}
+
+\begin{algorithm}
+\caption{FindPath: Our basic navigation algorithm}\label{alg:findpath}
+\KwData{An R-Tree $R$ and two points $s$ and $t$.}
+\KwResult{A set of connected roads of least path-weight.}
+Let $\ell_s$ be the leaf in $R$ closest to $s$\;
+Let $\ell_t$ be the leaf in $R$ closest to $t$\;
+$G\longleftarrow\text{BuildGraph}(R,\ell_s,\ell_t)$\;
+\Return $\text{Dijkstra}(G,s,t)$\;
+\end{algorithm}
+
+As implied by the algorithm, the graph Dijkstra's algorithm uses is implicit in the data, and only made explicit in the small areas our algorithm actually needs.
+It can only make the graph explicit by using the R-tree, and it is from that interaction things become interesting.
+We have two core observations:
+
+1) Using the R-tree can help trim the portion of the graph Dijkstra's algorithm must traverse.
+This allows our algorithm to have a better grasp of how big the graph will actually be, and so may improve performance.
+For enormous graphs, it may be that real-life search algorithms would have to be carefully engineered to perform well---this R-tree allows us to really chop down the graph size and avoid that hurdle.
+The downside is that it may lead to a slightly non-optimal path, if in fact the best roads involve going ``out of our way'' a bit, but due to the nice properties of spatial data it will not be too bad.
+In the extreme case, the \emph{only} paths may be very winding, so our search would fail!
+We are saving our user a very long drive, however.
+
+2) Using R-trees leads to a natural \emph{partition} of the graph.
+Imagine a slight extension to this algorithm, where we wish to record the number of times a road is traversed.
+Thus a counter is associated with each road, and to update a path requires a \emph{write lock}.
+As we build our graph from the R-tree, this immediately and naturally partitions the graph, so our thread would only have a lock on some small part of the graph, easily expressed by a minimum bounding rectangles.
+To our knowledge there is \emph{no such} locking mechanism so simple for graphs.
+Perhaps this is a reasonable way to approach concurrent graph access, a notoriously tricky problem.
+
+Even in this simple illustration we have seen that R-trees have very interesting interactions with compelling applications.
