@@ -61,10 +61,40 @@ def print_rect(r):
 	print r.boundingBoxMin, r.boundingBoxMax
 
 
+# never call this.
+def find_overlaps(r, rs):
+	res = []
+	for s in rs:
+		if r.overlaps(s):
+			res.append(s)
+	return res
+
+# Given rectangles (ie, the return from the search query), make a graph of which rectangles overlap.
+# g is the connectivity graph, and w is the weights to get from A to B.
+#
+# Note that "find_overlaps" is MISERABLE, because it makes everything quadratic.
+# That should (hopefully) be replaced with R-tree search queries, which I've commented below.
+def build_graph(rects):
+    g = {}
+    w = {}
+    #i = 0
+    for r in rects:
+	#i += 1
+	#if i % 100 == 0:
+		#print i
+        g[r] = []
+	# for v in rtree.search(r):
+	for v in find_overlaps(r, rects):
+            g[r].append(v)
+
+	    # add other direction when we loop around.
+            w[(r,v)]= r.getVolume()
+    return g, w
+
 # given a rectangle s, find a rectangle that contains s
 # (in other words, s may not actually be in the R-tree, so find the ``nearest'' actual node.
 # this is yet-untested.
-def make_leaf(g, s):
+def make_leaf(s):
     d = 1
     while len(rtree.search(s)) == 0:
 	s.boundingBoxMin = [s.boundingBoxMin[0]-d,s.boundingBoxMin[1]-d]
@@ -133,6 +163,25 @@ def extract_path(p, s, t):
 def print_path(p):
 	for r in p:
 		print_rect(r)
+
+# The first 4 lines (not counting comments) are untested, really just psuedocode.
+# Sorry! :(
+# Returns the list of rectangles comprising our path.
+def PathSearch(s, t):
+	# untested commands :(
+	sleaf = make_leaf(s)
+	rleaf = make_leaf(r)
+	# that is to say, area_to_search is our "actual" search query.
+	area_to_search = (s, t)
+	graph_rectangles = rtree.search(area_to_search)
+
+	# this and the following lines use tested code.
+	g, w = make_graph(graph_rectangles)
+	previous = shortest_path(g, w, sleaf, rleaf)
+
+	# a list of rect objects.
+	result = extract_path(previous, sleaf, rleaf)
+	return result
 
 if __name__ == "__main__":
 	g = pickle.load(open('graphfile'))
