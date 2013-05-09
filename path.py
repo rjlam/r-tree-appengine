@@ -1,5 +1,6 @@
 import sys
 import pickle
+import DiPriQueue
 #from rTree import *
 
 # pageSize = 100
@@ -85,7 +86,8 @@ def print_rect(r):
 g = pickle.load(open('graphfile'))
 w = pickle.load(open('weightfile'))
 
-# given a point s, find a rectangle that contains s
+# given a rectangle s, find a rectangle that contains s
+# (in other words, s may not actually be in the R-tree, so find the ``nearest'' actual node.
 def make_leaf(g, s):
     d = 1
     while len(rtree.search(s)) == 0:
@@ -98,25 +100,25 @@ def make_leaf(g, s):
 
 
 
-for r in g[Rect([-122.259,37.8368],[-122.259,37.8374])]:
-	print_rect(r)
-	print
-	print "==========="
-for r in g[Rect([-122.259,37.8362],[-122.259,37.8368])]:
-	print_rect(r)
-	print
-print "==========="
-for r in g[Rect([-122.259,37.8359],[-122.257,37.8362])]:
-	print_rect(r)
-	print
-print "==========="
-for r in g[Rect([-122.258,37.8352],[-122.257,37.8359])]:
-	print_rect(r)
-	print
-print "==========="
-for r in g[Rect([-122.258,37.8344],[-122.258,37.8352])]:
-	print_rect(r)
-	print
+# for r in g[Rect([-122.259,37.8368],[-122.259,37.8374])]:
+# 	print_rect(r)
+# 	print
+# 	print "==========="
+# for r in g[Rect([-122.259,37.8362],[-122.259,37.8368])]:
+# 	print_rect(r)
+# 	print
+# print "==========="
+# for r in g[Rect([-122.259,37.8359],[-122.257,37.8362])]:
+# 	print_rect(r)
+# 	print
+# print "==========="
+# for r in g[Rect([-122.258,37.8352],[-122.257,37.8359])]:
+# 	print_rect(r)
+# 	print
+# print "==========="
+# for r in g[Rect([-122.258,37.8344],[-122.258,37.8352])]:
+# 	print_rect(r)
+# 	print
 
 
 def mindist(Q, dist):
@@ -130,52 +132,62 @@ def mindist(Q, dist):
     return minpair[0]
 
 
+
 def shortest_path(graph, w, s, t):
-    dist = {}
+    print "Starting Djikstra's"
+    Q = DiPriQueue.DiPriQueue()
     prev = {}
     for v in graph:
-        dist[v] = float("inf")
+        Q.add_task(v, float("inf"))
+        #dist[v] = float("inf")
  
-    dist[s] = 0
-    #Q = map (lambda k : (dist[k], k), graph.keys())
-    Q = list(graph.keys())[:]
+    #dist[s] = 0
+    Q.add_task(s, 0)
+    #Q = list(graph.keys())[:]
 
     while len(Q) > 0:
-        u = mindist(Q,dist)
+	udist, u = Q.pop_task()
+        #u = mindist(Q,dist)
         #print u, Q
-        Q.remove(u)
+        #Q.remove(u)
         #print Q
 
         if u == t:
             return prev
-        if dist[u] == float("inf"):
+        if udist == float("inf"):
             break
 
         for v in graph[u]:
-            alt = dist[u] + w[(u,v)]
-            if alt < dist[v]:
-                dist[v] = alt
+            #alt = dist[u] + w[(u,v)]
+            alt = udist + w[(u,v)]
+            if alt < Q.get_dist(v):
+                #dist[v] = alt
+		Q.remove_task(v)
+		Q.add_task(v, alt)
                 prev[v] = u
     return prev
 
-print "??????????????????????" 
 def extract_path(p, s, t):
-    print len(p)
+    path = []
     toprint = t
-    i = 0
     while toprint != s:
-	i += 1
-        print_rect(toprint)
-	print
+	path.append(toprint)
 	if toprint in p:
-	        toprint = p[toprint]
+		toprint = p[toprint]
 	else:
-		break
-    #print_rect(s)
-    print i
+		# if we only have a partial path
+		return path
+    # if we have a full path.
+    path.append(toprint)
+    return path
+
+def print_path(p):
+	for r in p:
+		print_rect(r)
 
 #extract_path(shortest_path(test_graph, test_w, 1, 5), 1, 5)
 
 R1 = Rect([-122.259,37.8368],[-122.259,37.8374])
 R2 = Rect([-122.258,37.8344],[-122.258,37.8352])
-extract_path(shortest_path(g, w, R1, R2), R1, R2)
+R3 = Rect([-121.704,37.6219],[-121.703,37.6219])
+print_path(extract_path(shortest_path(g, w, R1, R2), R1, R2))
