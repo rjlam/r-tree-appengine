@@ -47,7 +47,7 @@ Cathrin Weiss\\
 \label{sec:intro}
 Google App Engine (GAE) allows for rapid development of web applications without worrying about maintenance or scalability\footnote{\url{https://developers.google.com/appengine/}}. It follows the key-value storage paradigm for persistent as well as in-memory storage. 
 
-We developed a route planning application leveraging an R-Tree structure on the server side. Using the California Roads data set~\cite{Online:cardata}, we provide route guidance functionality given two input points A and B (assuming A and B are within the described area). The project consists of six components:
+We developed a route planning application, \emph{RNav}, that leverages an R-Tree structure on the server side. Using the California Roads data set~\cite{Online:cardata}, we provide route guidance functionality given two input points A and B (assuming A and B are within the described area). The project consists of six components:
 
 \begin{enumerate}
 \item The R-Tree data loader, which will convert the geo data into a key-value-compatible R-Tree index (this and part 1 may possibly be combined)
@@ -58,14 +58,14 @@ We developed a route planning application leveraging an R-Tree structure on the 
 \item A result generator to present the final route to the user. 
 \end{enumerate}
 
-Currently Datastore (the GAE key-value store) does not have native support for indexing spatial data and also uses a non-relational database model. Thus, our main challenge for this project was transposing the traditional R-Tree implementation in~\cite{DBLP:conf/sigmod/Guttman84} into its GAE equivalent.
+Currently Datastore (the GAE key-value store) does not have native support for indexing spatial data and also uses a non-relational database model. Thus, the main challenge for this project was translating the traditional R-Tree implementation in~\cite{DBLP:conf/sigmod/Guttman84} into its GAE equivalent given the constraints of using a key-value store.
 
-The architecture of our project is presented in section~\ref{sec:architecture}. 
+The architecture of our project is presented in Section~\ref{sec:architecture} and the implementation details are discussed in Section~\ref{sec:implementation}. 
 
 %====== ARCHITECTURE ==================
 \section{Architecture}
 \label{sec:architecture}
-\begin{figure}[h]
+\begin{figure}[h!]
 \begin{center}
 \includegraphics[scale=0.3]{fig/gapps1}
 \caption{Google App Engine default architecture}
@@ -73,7 +73,7 @@ The architecture of our project is presented in section~\ref{sec:architecture}.
 \end{center}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[h!]
 \begin{center}
 \includegraphics[scale=0.3]{fig/gapps2}
 \caption{Google App Engine architecture with R-Tree index}
@@ -85,24 +85,31 @@ The architecture of a common Google App Engine application is depicted in Figure
 
 Additionally, we implemented a route-finding algorithm, which takes as input the list of roads retrieved via the R-Tree lookup and generates a route from point A to point B. The resulting is presented to the querying user in a graphical result view.
 
+
 %====== IMPLEMENTATION ==================
 \section{Implementation}
 \label{sec:implementation}
 \subsection{R-Tree layout in Datastore}
-Datastore is a distributed schemaless key-value object datastore that is designed for scalability~\cite{datastore}. It only allows for certain data types to be stored and does not support certain operations such as joins and filtering on multiple attributes. It is possible to store basic data types like integers, short strings, text, and also generic blob data. A Datastore key is composed of a unique identifier and an optional name. When storing an object for the first time, a unique key identifier is automatically created and can be accessed via the Datastore API. 
+Datastore is a distributed schemaless key-value object datastore that is designed for scalability. It only allows for certain data types to be stored and does not support certain operations such as joins and filtering on multiple attributes. It is possible to store basic data types like integers, short strings, text, and also generic blob data. A Datastore key is composed of a unique identifier and an optional name. When storing an object for the first time, a unique key identifier is automatically created and can be accessed via the Datastore API. 
 
 It is not possible to directly store general objects. Because of this it is not entirely straightforward how to store an R-Tree, which is composed of three non-standard object types: rectangles, entries, and nodes. Recall from Guttman's paper\cite{DBLP:conf/sigmod/Guttman84} that there are two types of nodes in an R-tree: internal and leaf. All nodes have a list of entries describing its children. An internal node entry is of the form ($MBR$, $ptr$) and a leaf node entry is of the form ($MBR$, $oid$), where $MBR$ is the minimum bounding rectangle for child, $ptr$ is a pointer to the child node, and $oid$ is the identifier for the object in the database. In this traditional R-tree, nodes correspond to pages.
 
-In contrast our GAE implementation stores nodes as a key-value pair (key=$key$, value=$entries$), where $key$ is a unique automatically generated value and $entries$ is a list containing data about the node's children. The entries in $entries$ are blob-serialized using Python's \textit{cPickle} module and are of the form ($MBR$, $child\_key$), where $child\_key$ refers to the Datastore object containing the child node. If it is a leaf node, $child\_key$ is \textit{None} for all entries. In order to refer to a child node within an entry, the entry needs to know the node's key identifier in the data store. Therefore, tree storage needs to happen bottom up: we have to start with leaf nodes, whose entries do not have child nodes, obtain their key identifier from the data store, update the reference in their respective parent entry, and so on. To keep track of the root of the R-tree, we store an object containing metadata about the structure in the Datastore. This metadata object stores information such as the root key, the page size, and the minimum number of entries per node. By checking whether the metadata is present, we can infer whether there is a tree saved in the data store or not.
+In contrast our GAE implementation stores nodes as a key-value pair (key=$key$, value=$entries$), where $key$ is a unique automatically generated value and $entries$ is a list containing data about the node's children. The entries in $entries$ are blob-serialized using Python's \textit{cPickle} module and are of the form ($MBR$, $child\_key$), where $child\_key$ refers to the Datastore object containing the child node. If it is a leaf node, $child\_key$ is \textit{None} for all entries. In order to refer to a child node within an entry, the entry needs to know the node's key identifier in the data store. Thus, the tree must be built bottom up: we must start by allocating leaf-level nodes, then obtaining their corresponding $key$ from the Datastore to update the relevant $child\_key$ in each parent entry. This continue upwards until we reach the root. To keep track of the root of the R-tree, we store an object containing metadata about the structure in the Datastore. This metadata object stores information such as the root key, the page size, and the minimum number of entries per node. By checking whether the metadata is present, we can infer whether there is a tree saved in the data store or not.
 
 Insertion and search are performed as described by Guttman\cite{DBLP:conf/sigmod/Guttman84} except we navigate to different nodes using keys instead of pointers. Our implementation also uses the quadratic split algorithm discussed in the paper on an overflow. Currently we do not have a working delete algorithm, but since our present data set is static it is acceptable. We thus leave the delete function as a future task.
 
-\TODO{add a descriptive graphic}
-
-\TODO{Add more explaining prose about the key-value design in app engine}
+%\TODO{add a descriptive graphic}
+% Is this necessary?
+% I don't think we actually use memcache?
 
 \subsection{Navigation Algorithm}
 \input{nav.tex}
+
+% Will we include any tests we performed on this?
+
+\section{Conclusion}
+We were able to create RNav, a route planning application built using Google App Engine. It utilizes an R-tree structure built on top of a key-value datastore on the back-end to index data on roads in California. In addition to the R-tree, RNav is comprised of components such as the R-tree loader, navigation algorithm, and front-end. The application is available at \url{http://r-tree.appspot.com}
+
 \bibliographystyle{abbrv}
 \bibliography{main}
 
