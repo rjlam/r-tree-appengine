@@ -155,7 +155,7 @@ class Node :
 			self.dbn = DBNode(size=self.size, isRoot=self.isRoot)		
 		self.dbn.entries = cPickle.dumps(self.entries)
 		self.dbn.put()
-		memcache.add(str(self.dbn.key().id()), dbn, 3600)
+		memcache.add(str(self.dbn.key().id()), self.dbn, 3600)
 		return self.dbn.key().id()
 				
 ###########
@@ -202,7 +202,7 @@ class RTree :
 			self.rootKey = self.root.save()
 		dbm = DBMetaData(rootId = self.rootKey, minEntries=self.minEntries, curId=self.curId, key_name="metadata")
 		dbm.put()
-		memcache.add("metadata", dbm)
+		memcache.add("metadata", dbm, 3600)
 	
 	def chooseLeaf(self, newEntry, path, depth=-1):
 		n = self.root
