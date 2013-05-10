@@ -24,8 +24,8 @@
 \LinesNumbered
 \begin{document}
 
-\title{RNav - R-Tree Navigation Helper on Google App Engine}
-\subtitle{CS 764 - Spring 2013 - Innovation Project}
+\title{R-Tree Navigation Helper on Google App Engine}
+\subtitle{CS 764 - Spring 2013 - Extension Project}
 
 \author{
 Aaron Gorenstein\\
@@ -47,10 +47,10 @@ Cathrin Weiss\\
 \label{sec:intro}
 Google App Engine (GAE) allows for rapid development of web applications without worrying about maintenance or scalability\footnote{\url{https://developers.google.com/appengine/}}. It follows the key-value storage paradigm for persistent as well as in-memory storage. 
 
-We developed a route planning application, \emph{RNav}, that leverages an R-Tree structure on the server side. Using the California Roads data set~\cite{Online:cardata}, we provide route guidance functionality given two input points A and B (assuming A and B are within the described area). The project consists of six components:
+We developed a route planning application (\url{http://r-tree.appspot.com/}), that leverages an R-Tree structure on the server side. Using the California Roads data set~\cite{Online:cardata}, we provide route guidance functionality given two input points A and B (assuming A and B are within the described area). The project consists of six components:
 
 \begin{enumerate}
-\item The R-Tree data loader, which will convert the geo data into a key-value-compatible R-Tree index (this and part 1 may possibly be combined)
+\item The R-Tree data loader, which will convert the geo data into a key-value-compatible R-Tree index
 \item The actual R-Tree index, which can process the native R-Tree operations,
 \item An algorithm module to compute the shortest route from point A to point B,
 \item A simple query engine to process navigation requests, 
@@ -96,7 +96,7 @@ It is not possible to directly store general objects. Because of this it is not 
 
 In contrast our GAE implementation stores nodes as a key-value pair (key=$key$, value=$entries$), where $key$ is a unique automatically generated value and $entries$ is a list containing data about the node's children. The entries in $entries$ are blob-serialized using Python's \textit{cPickle} module and are of the form ($MBR$, $child\_key$), where $child\_key$ refers to the Datastore object containing the child node. If it is a leaf node, $child\_key$ is \textit{None} for all entries. In order to refer to a child node within an entry, the entry needs to know the node's key identifier in the data store. Thus, the tree must be built bottom up: we must start by allocating leaf-level nodes, then obtaining their corresponding $key$ from the Datastore to update the relevant $child\_key$ in each parent entry. This continue upwards until we reach the root. To keep track of the root of the R-tree, we store an object containing metadata about the structure in the Datastore. This metadata object stores information such as the root key, the page size, and the minimum number of entries per node. By checking whether the metadata is present, we can infer whether there is a tree saved in the data store or not.
 
-Insertion and search are performed as described by Guttman\cite{DBLP:conf/sigmod/Guttman84} except we navigate to different nodes using keys instead of pointers. Our implementation also uses the quadratic split algorithm discussed in the paper on an overflow. Currently we do not have a working delete algorithm, but since our present data set is static it is acceptable. We thus leave the delete function as a future task.
+Insertion and search are performed as described by Guttman\cite{DBLP:conf/sigmod/Guttman84} except we navigate to different nodes using keys instead of pointers. Our implementation also uses the quadratic node split algorithm discussed in the paper. Since the data set is static, we did not implement a delete function and leave that to future work.
 
 %\TODO{add a descriptive graphic}
 % Is this necessary?
@@ -106,6 +106,8 @@ Insertion and search are performed as described by Guttman\cite{DBLP:conf/sigmod
 \input{nav.tex}
 
 % Will we include any tests we performed on this?
+\section{Discussion}
+While the GAE R-tree implementation performs correctly, we were facing challenges with timeouts. Even though the R-tree structure allows for more efficient querying, large data sets still cause major processing delays. Loading an R-tree into Google's datastore requires several AJAX iterations to prevent timeouts from happening. While larger queries can be processed successfully on a local GAE installation, we encountered timeouts in the deployed version. Better caching strategies to improve timeout robustness will be left to future work.
 
 \section{Conclusion}
 We were able to create RNav, a route planning application built using Google App Engine. It utilizes an R-tree structure built on top of a key-value datastore on the back-end to index data on roads in California. In addition to the R-tree, RNav is comprised of components such as the R-tree loader, navigation algorithm, and front-end. The application is available at \url{http://r-tree.appspot.com}
