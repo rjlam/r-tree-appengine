@@ -142,7 +142,19 @@ function sendQuery(sPoint, ePoint){
 	}
 	,
 	error: function(data) {
-		alert("error..." + data) ;
+		$( "#confirm" ).html("Query could not be processed successfully. Likely too much data was requested and a timeout occurred.");
+		$( "#confirm" ).dialog({
+		                        width:450,
+		                        modal: true,
+		                        buttons: {	                                
+		                                Close: function() {
+												$("#status").dialog( "close" );												
+												$(this).dialog( "close" );												
+												return false;
+		                                }
+								}
+		});
+		
 	} 
 	});
 	return true;

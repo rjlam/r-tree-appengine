@@ -434,6 +434,33 @@ def loadMain():
 	f = open("RTree.pickled", "r")
 	tree = cPickle.load(f)
 	f.close()
+	i = 0
+	print len(tree.root.entries)
 	r = countEntries(tree.root)
 	print r
+	for e in tree.root.entries : 
+		f = open("RTree.pickled."+str(i), "w")
+		cPickle.dump(e.child, f)
+		f.close()
+		print len(e.child.entries)
+		e.child = str(i)
+		i += 1
+	f = open("RTree.pickled.top", "w")
+	cPickle.dump(tree, f)
+	f.close()
+	
+def splitFirst():
+	f = open("Rtree.pickled.0")
+	node = cPickle.load(f)
+	f.close()
+	i = 0
+	for e in node.entries: 
+		f = open("RTree.pickled.0."+str(i), "w")
+		cPickle.dump(e.child, f)
+		f.close()
+		e.child = "RTree.pickled.0."+str(i)
+		i += 1
+	f = open("Rtree.pickled.0", "w")
+	cPickle.dump(node, f)
+	f.close()
 	
