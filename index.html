@@ -31,14 +31,24 @@
 	the top right coordinate is -121.7, 37.8.</p>
     <p>An example query: -121.7,37.59 to -122.2,37.8</p>
 	<form name="query_box" id="query_box_form" method="post" onsubmit="parseQuery();return false;">
-		Start point: <input type="text" name="startPoint" id="startPoint" class="input"> <br/>
-		End point: <input type="text" name="endPoint" id="endPoint" class="input"><br/>
+		Start point: <input type="text" name="startPoint" id="startPoint" class="input" > <br/>
+		End point: <input type="text" name="endPoint" id="endPoint" class="input" ><br/>
 		<input type="hidden" name="client_id" value="{{ id }}"/>
 		<input type="hidden" name="server_token" value="{{ token }}"/>
-		<input type="submit" name="submit" class="button" onClick="$('#query_box_form').submit();return false;">
+		<input type="submit" name="submit" class="button" onClick="$('#query_box_form').submit();return false;"/>
+		<p/>
+		<button name="q1" name="query1" class="button" onClick="submitQuery1();return false;">Query 1</button>
+		<button name="q2" name="query2" class="button" onClick="submitQuery2();return false;">Query 2</button>
+		<button name="q3" name="query3" class="button" onClick="submitQuery3();return false;">Query 3</button>
+		<p/>
+		<!--<b>Query 1:</b> Start point: -122.1,37.7, End point: -122.2,37.8, number of rectangles enclosed by 
+		start and end: 6953, number of rectangles involved in route from start to end: 186.</p>
+		<b>Query 2:</b> Start point: -122.1,37.7, End point: -122.2,37.8, number of rectangles enclosed by 
+		start and end: 6953, number of rectangles involved in route from start to end: 186.</p>
+		<b>Query 3:</b> Start point: -122.1,37.7, End point: -122.2,37.8, number of rectangles enclosed by 
+		start and end: 6953, number of rectangles involved in route from start to end: 186.</p>-->
 	</form>
 	
-	<!--TODO: Make this become invisible if bulk load is done?-->
 	<div id="loadDiv" class="{{ showBulk }}">
 	<p>To bulk load data on the roads in California into the datastore, click on the below button:</p>
 	<form id="bulk_load_form" name="bulk_load" method="post">

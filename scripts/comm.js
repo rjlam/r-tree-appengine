@@ -38,19 +38,39 @@ function returnRectangles(lst){
 	return false;	
 }
 
-function bulkLoadData(){
+function bulkLoadData(where){
+	var whereStart = 0;
+	if (where != null){
+		whereStart = where;
+	}
 	console.log("loading data");
+	var data = {'upTo':whereStart};
 	$.ajax({
 		async: false,
 		global: false,
+		data: data,
 		url: '/bulk_load',
 		type: 'POST',
 		dataType: "text",
 	  	success: function(data) {
-			$("#status").dialog( "close" );
-			$("#loadDiv").hide();
-			$("#messageDiv").html("Bulk loading completed.");
-			return false;
+			// this length check is brittle .. works for what is used right now
+			if (data.length > 100){
+				$("#status").dialog( "close" );
+				$("#loadDiv").hide();
+				$("#messageDiv").html("Bulk loading completed.");
+				return false;
+			} else {
+				var json = JSON.parse(data);
+				console.log(json);
+				$("#messageDiv").html(json.msg);
+				$("#status").append("<p/>"+json.msg);
+				var f = function(){
+					bulkLoadData(json.upTo);
+					return false;
+				}
+				setTimeout(f, 1000);
+				return false;
+			}
 		},
 		error: function(data) {
 			showStatus("Bulk loading failed: "+data);

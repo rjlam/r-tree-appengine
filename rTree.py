@@ -528,6 +528,13 @@ class RTree :
 					entr += str(e.I.boundingBoxMin) + "," +str(e.I.boundingBoxMax) + " ; "
 				print s , "E:",len(cur.entries)	,entr
 		
+	def depthSaveTree(self, n ):
+		if n.entries[0].child is None : 
+			return n.save()			
+		for e in n.entries : 
+			eChild = self.depthSaveTree(e.child)
+			e.child = eChild
+		return n.save()
 	
 		
 def printLeaves(n, depth=1):

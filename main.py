@@ -9,11 +9,12 @@ from django.utils import simplejson
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 
-from google.appengine.api import channel
+from google.appengine.api import channel, memcache
 from google.appengine.ext import db
 
 import bulkRTree
 import rTree
+import cPickle
 
 from path import *
 
@@ -166,6 +167,13 @@ class HandleQuery(webapp.RequestHandler):
         self.response.out.write(message);
         #channel.send_message(client_id, message)
 
+    def formatResultList(self, lst):
+        results = []
+        for item in lst : 
+           m = {"res":item}
+           results.append(m)	
+        return results
+
     def computePath(self, sPoint, ePoint, rtree, entryList):
         ## TODO: compute path from sPoint to ePoint using Entry objects in entryList
         #lst, mx, my = createTreeRects()
@@ -174,15 +182,7 @@ class HandleQuery(webapp.RequestHandler):
         resEntries = PathSearch(sPoint, ePoint, rtree, entryList)
         lst, lst2, mx, my = normalizeList(entryList, resEntries)
         print "Number results:" ,len(lst)		
-        results = []
-        for item in lst : 
-           m = {"res":item}
-           results.append(m)
-        results2 = []
-        for item in lst2 : 
-           m = {"res":item}
-           results2.append(m)
-        return (results,results2, mx, my)
+        return (self.formatResultList(lst),self.formatResultList(lst2), mx, my)
         
     def getRectangles(self, sPoint, ePoint):
         # Hook into R-tree code here
@@ -206,21 +206,39 @@ class HandleQuery(webapp.RequestHandler):
         if len(sParts) != 2 or len(eParts) != 2 : 
             message_template['message'] = "Invalid input format"
             return simplejson.dumps(message_template)
+        queryData = [sParts[0],sParts[1], eParts[0], eParts[1]]
         message_template['type'] = 'results'
-        tree = rTree.RTree(None, None)
-        minX = min(sParts[0], eParts[0])
-        minY = min(sParts[1], eParts[1])
-        maxX = max(sParts[0], eParts[0])
-        maxY = max(sParts[1], eParts[1])
-        sEntry = make_leaf(rTree.Rect([sParts[0],sParts[1]],[sParts[0], sParts[1]]), tree)
-        eEntry = make_leaf(rTree.Rect([eParts[0],eParts[1]],[eParts[0], eParts[1]]), tree) 
-        allRect = rTree.Entry(rTree.Rect([minX,minY],[maxX, maxY]))
-        results = tree.search(allRect)
-        if len(results) > 10000 : 
-            message_template['type'] = "error"
-            message_template['message'] = "Selected area too large for route computation. (Exceeding 10,000 rectangles)."
+        if memcache.get(str(queryData)+"-1") is None : 
+        
+            tree = rTree.RTree(None, None)
+            minX = min(sParts[0], eParts[0])
+            minY = min(sParts[1], eParts[1])
+            maxX = max(sParts[0], eParts[0])
+            maxY = max(sParts[1], eParts[1])
+            sEntry = make_leaf(rTree.Rect([sParts[0],sParts[1]],[sParts[0], sParts[1]]), tree)
+            eEntry = make_leaf(rTree.Rect([eParts[0],eParts[1]],[eParts[0], eParts[1]]), tree) 
+            allRect = rTree.Entry(rTree.Rect([minX,minY],[maxX, maxY]))
+            results = tree.search(allRect)
+            print "RTree search completed. Number of results: ", len(results)
         else :
-            gRect, path, mx, my = self.computePath(sEntry, eEntry, tree, results)
+            d = memcache.get(str(queryData)+"-1")
+            results = cPickle.loads(d)
+        if len(results) > 10000 : 
+            message_template['message'] = "Selected area too large for route computation. (Exceeding 10,000 rectangles)."
+            lst,mx,my = normalizeList(results)
+            message_template['grect'] = self.formatResultList(lst)
+            message_template['rect'] = self.formatResultList(["0"])
+            message_template['minVals'] = {'mx':mx, 'my':my}
+            message_template['sp'] = {'x':sEntry.I.boundingBoxMin[0], 'y':sEntry.I.boundingBoxMin[1]}
+            message_template['ep'] = {'x':eEntry.I.boundingBoxMin[0], 'y':eEntry.I.boundingBoxMin[1]}
+        else :
+            if memcache.get(str(queryData)+"-2") is not None : 
+                res = memcache.get(str(queryData)+"-2")
+                gRect,mxx,myy = normalizeList(res)
+                mx = min(mxx, mx)
+                my = min(myy, my)
+            else :
+                gRect, path, mx, my = self.computePath(sEntry, eEntry, tree, results)
             message_template['rect'] = path        
             message_template['grect'] = gRect
             message_template['minVals'] = {'mx':mx, 'my':my}
@@ -233,19 +251,73 @@ class DoBulkLoad(webapp.RequestHandler):
 		showBulk = "invisible"
 		msg = "No bulk loading to do"
 		meta = rTree.getMeta()
-		if meta is None : 
-			fn = "RTree.pickled" 
+		rtData = memcache.get("rtree")
+		where = self.request.get('upTo')
+		if meta is None or memcache.get("complete") is None: 
+			fn = "RTree.pickled.top" 
+			try :
+				f = open("RTree.pickled")
+				fn = "RTree.pickled"
+				f.close()
+			except : 
+				pass
 			#fn = "CaStreet.ascii.10k" #"USclpoint.fnl"
-			rtree = bulkRTree.insertFromPickle(fn)
+			if rtData is not None : 
+				rtree = cPickle.loads(rtData)
+			else :
+				rtree = bulkRTree.insertFromPickle(fn)
 			print "Now saving to database."
-			rtree.save()
-			msg = "RTree bulk loading completed."
+			
+			i = 0
+			j = 0
+			howMany = 20
+			if where == "" : 
+				where = 0
+			else : 
+				where = int(where)
+			upTo = min(len(rtree.root.entries), where+howMany)
+			for current in range(where, upTo): #e in rtree.root.entries : 
+				e = rtree.root.entries[current]
+				if (type(e.child) == str) : 
+					f = open("RTree.pickled."+str(current))
+					e.child = cPickle.load(f)
+					f.close()
+				decends = False
+				for en in e.child.entries : 
+					if type(en.child) == str : 
+						decends = True
+						f = open(en.child)
+						en.child = cPickle.load(f)
+						f.close()
+						en.child = rtree.depthSaveTree(en.child)
+				if decends : 
+					rtree.root.entries[current].child = e.child.save()
+				else : 
+					rtree.root.entries[current].child = rtree.depthSaveTree(e.child)
+				i+=1
+			memcache.delete("rtree")
+			memcache.add("rtree", cPickle.dumps(rtree))
+
+			if (upTo == len(rtree.root.entries)): 
+				rtree.rootKey = rtree.root.save()
+				rtree.save()
+				msg = "RTree bulk loading completed."
+				memcache.add("complete", "true")
+				ec = rTree.countEntries(rtree.root)
+				print ec
+			else : 
+				perc = int(100.0/len(rtree.root.entries) * upTo)
+				msg = "RTree bulk loading: "+str(perc)+" % completed... "
+				js = {"upTo":str(upTo), "msg":msg}
+				self.response.out.write(simplejson.dumps(js))
+				return
 		else :
 			print msg
-			
+		
 		template_values = {'id': self.request.get('client_id'), 'token': self.request.get('server_token'), 'showBulk': showBulk,'message':msg}
 		template = JINJA_ENVIRONMENT.get_template('index.html')		
-		self.response.out.write(template.render(template_values))
+		self.response.out.write(template.render(template_values))		
+		
 		
 	def get(self):		
 		self.post()

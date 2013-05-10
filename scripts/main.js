@@ -21,6 +21,27 @@ function showStatus(msg){
 	return false;
 }
 
+function submitQuery1(){
+	$("#startPoint").val("-122.1,37.7");
+	$("#endPoint").val("-122.2,37.8");
+	$("#query_box_form").submit();
+	return false;
+}
+
+function submitQuery2(){
+	$("#startPoint").val("-122.1,37.7");
+	$("#endPoint").val("-122.2,37.8");
+	$("#query_box_form").submit();
+	return false;
+}
+
+function submitQuery3(){
+	$("#startPoint").val("-122.1,37.7");
+	$("#endPoint").val("-122.2,37.8");
+	$("#query_box_form").submit();
+	return false;
+}
+
 // Handles the input from the user and prepare it for message to server
 function parseQuery(){
 	$( "#confirm" ).html("Your start and end point need to be of the form 'xy.z,ab.c'. Is that the case?");
@@ -45,7 +66,6 @@ function parseQuery(){
 											return false;
 	                                },
 									No: function() {
-										$("#status").dialog( "close" );
 										$(this).dialog( "close" );
 										return false;
 									}

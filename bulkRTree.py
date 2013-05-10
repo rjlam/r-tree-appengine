@@ -121,7 +121,9 @@ class Node :
 
 	def save(self):
 		if self.dbn is None: 
-			self.dbn = DBNode(size=self.size, isRoot=self.isRoot)		
+			self.dbn = DBNode(size=self.size, isRoot=self.isRoot)	
+		else :
+			memcache.delete(str(self.dbn.key().id()))	
 		self.dbn.entries = cPickle.dumps(self.entries)
 		assert(len(self.entries) > 0)
 		self.dbn.put()
@@ -132,24 +134,46 @@ class Node :
 class DBMetaData(db.Model):
 	rootId = db.IntegerProperty()
 	minEntries = db.IntegerProperty()
-	curId = db.IntegerProperty()				
+	curId = db.IntegerProperty()	
+
+def getMeta(): 
+	dbm = memcache.get("metadata")
+	if dbm is None : 
+		dbm = DBMetaData.get_by_key_name("metadata")
+		if dbm is None :
+			return None
+		memcache.add("metadata", dbm, 3600)
+	return dbm			
 		
 class RTree : 
 	root = None
 	minEntries = None
 	curId = 0
 	rootKey = None
-	
-	def __init__(self, pageSize, mE):
-		self.root = Node(pageSize, True)
-		self.minEntries = mE
-		self.curId = 0		
+
+	def __init__(self, pageSize = None , mE = None):
+		if pageSize is None and mE is None : 
+			dbm = getMeta()
+			self.rootKey = dbm.rootId
+			self.minEntries = dbm.minEntries
+			self.curId = dbm.curId
+			dbn =  memcache.get(str(self.rootKey))
+			if dbn is None : 
+				dbn = DBNode.get_by_id(self.rootKey)
+			self.root = Node(dbn.size, dbn.isRoot)
+			self.root.entries = cPickle.loads(dbn.entries)
+			self.root.dbn = dbn
+		else : 
+			self.root = Node(pageSize, True)
+			self.minEntries = mE
+			self.curId = 0		
 
 	def save(self):
 		if self.rootKey is None :
 			self.rootKey = self.depthSaveTree(self.root)
 		dbm = DBMetaData(rootId = self.rootKey, minEntries=self.minEntries, curId=self.curId, key_name="metadata")
 		dbm.put()
+		memcache.delete("metadata")
 		memcache.add("metadata", dbm, 3600)
 	
 	def chooseLeaf(self, newEntry, path, depth=-1):
@@ -390,6 +414,9 @@ class RTree :
 		#data = cPickle.dumps(self)
 		cPickle.loads(data)
 		#self = tree
+		
+	def search(self, e):
+		return self.root.search(e)
 			 			
 			
 
