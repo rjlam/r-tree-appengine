@@ -45,9 +45,10 @@ Cathrin Weiss\\
 %====== OVERVIEW =======================
 \section{Overview}
 \label{sec:intro}
-Google's App Engine allows for rapid development of web applications without worrying about maintenance or scalability\footnote{\url{https://developers.google.com/appengine/}}. It follows the key-value storage paradigm for persistent as well as in-memory storage.
+Google App Engine (GAE) allows for rapid development of web applications without worrying about maintenance or scalability\footnote{\url{https://developers.google.com/appengine/}}. It follows the key-value storage paradigm for persistent as well as in-memory storage. 
 
 We developed a route planning application leveraging an R-Tree structure on the server side. Using the California Roads data set~\cite{Online:cardata}, we provide route guidance functionality given two input points A and B (assuming A and B are within the described area). The project consists of six components:
+
 \begin{enumerate}
 \item The R-Tree data loader, which will convert the geo data into a key-value-compatible R-Tree index (this and part 1 may possibly be combined)
 \item The actual R-Tree index, which can process the native R-Tree operations,
@@ -56,7 +57,8 @@ We developed a route planning application leveraging an R-Tree structure on the 
 \item A query frontend for entering route requests, and
 \item A result generator to present the final route to the user. 
 \end{enumerate}
-One of the challenges was the mapping of the traditional R-Tree implementation in~\cite{DBLP:conf/sigmod/Guttman84} to Google's key-value store. 
+
+Currently Datastore (the GAE key-value store) does not have native support for indexing spatial data and also uses a non-relational database model. Thus, our main challenge for this project was transposing the traditional R-Tree implementation in~\cite{DBLP:conf/sigmod/Guttman84} into its GAE equivalent.
 
 The architecture of our project is presented in section~\ref{sec:architecture}. 
 
@@ -79,19 +81,21 @@ The architecture of our project is presented in section~\ref{sec:architecture}.
 \end{center}
 \end{figure}
 
-The architecture of a common Google App Engine application is depicted in figure~\ref{fig:gappsArch}. A user makes a web request, which gets forwarded to the Python backend, which itself processes the request and interacts with the data store. The data can either be stored persistently or in memory. The latter is referred to as ``Memcache''. Usually data access follows standard key-value protocols. For our project we created an R-Tree index within the key-value data store in order to speed up spatial requests. This is schematically shown in figure~\ref{fig:gappsArch2}. The actual R-Tree layout and implementation is described in section~\ref{sec:implementation}.
+The architecture of a common Google App Engine application is depicted in Figure~\ref{fig:gappsArch}. A user makes a web request, which gets forwarded to the Python backend, which itself processes the request and interacts with the data store. The data can either be stored persistently or in memory. The latter is referred to as ``Memcache''. Usually data access follows standard key-value protocols. For our project we created an R-Tree index within GAE Datastore to efficiently serve spatial queries. This is schematically shown in Figure~\ref{fig:gappsArch2}. The actual R-Tree layout and implementation is described in Section~\ref{sec:implementation}.
 
 Additionally, we implemented a route-finding algorithm, which takes as input the list of roads retrieved via the R-Tree lookup and generates a route from point A to point B. The resulting is presented to the querying user in a graphical result view.
 
 %====== IMPLEMENTATION ==================
 \section{Implementation}
 \label{sec:implementation}
-\subsection{R-Tree layout in Google's key-value store}
-Google's App Engine only allows for certain data types to be stored in their key-value datastore. It is possible to store basic data types, such as integers, short strings, text, and also generic blob data. A datastore key is composed of a unique identifier and an optional name. When storing an object for the first time, a unique key identifier is automatically created and can be accessed via the datastore API. 
+\subsection{R-Tree layout in Datastore}
+Datastore is a distributed schemaless key-value object datastore that is designed for scalability~\cite{datastore}. It only allows for certain data types to be stored and does not support certain operations such as joins and filtering on multiple attributes. It is possible to store basic data types like integers, short strings, text, and also generic blob data. A Datastore key is composed of a unique identifier and an optional name. When storing an object for the first time, a unique key identifier is automatically created and can be accessed via the Datastore API. 
 
-It is not possible to directly store objects. Given that, it is not entirely straightforward how to store an R-Tree which is composed of three nontrivial object types, namely rectangles, entries, and nodes. 
+It is not possible to directly store general objects. Because of this it is not entirely straightforward how to store an R-Tree, which is composed of three non-standard object types: rectangles, entries, and nodes. Recall from Guttman's paper\cite{DBLP:conf/sigmod/Guttman84} that there are two types of nodes in an R-tree: internal and leaf. All nodes have a list of entries describing its children. An internal node entry is of the form ($MBR$, $ptr$) and a leaf node entry is of the form ($MBR$, $oid$), where $MBR$ is the minimum bounding rectangle for child, $ptr$ is a pointer to the child node, and $oid$ is the identifier for the object in the database. In this traditional R-tree, nodes correspond to pages.
 
-We decided to store nodes with an automatically generated key and the entries as a node's values. The entries are blob-serialized using Python's \textit{cPickle} module. In order to refer to a child node within an entry, the entry needs to know the node's key identifier in the data store. Therefore, tree storage needs to happen bottom up: we have to start with leaf nodes, whose entries do not have child nodes, obtain their key identifier from the data store, update the reference in their respective parent entry, and so on. Once the root node has been stored, we save some metadata about the tree, such as the key identifier to the root, the page size, and the minimum number of entries per node. By simply checking whether the metadata is present, we can infer whether there is a tree saved in the data store or not.
+In contrast our GAE implementation stores nodes as a key-value pair (key=$key$, value=$entries$), where $key$ is a unique automatically generated value and $entries$ is a list containing data about the node's children. The entries in $entries$ are blob-serialized using Python's \textit{cPickle} module and are of the form ($MBR$, $child\_key$), where $child\_key$ refers to the Datastore object containing the child node. If it is a leaf node, $child\_key$ is \textit{None} for all entries. In order to refer to a child node within an entry, the entry needs to know the node's key identifier in the data store. Therefore, tree storage needs to happen bottom up: we have to start with leaf nodes, whose entries do not have child nodes, obtain their key identifier from the data store, update the reference in their respective parent entry, and so on. To keep track of the root of the R-tree, we store an object containing metadata about the structure in the Datastore. This metadata object stores information such as the root key, the page size, and the minimum number of entries per node. By checking whether the metadata is present, we can infer whether there is a tree saved in the data store or not.
+
+Insertion and search are performed as described by Guttman\cite{DBLP:conf/sigmod/Guttman84} except we navigate to different nodes using keys instead of pointers. Our implementation also uses the quadratic split algorithm discussed in the paper on an overflow. Currently we do not have a working delete algorithm, but since our present data set is static it is acceptable. We thus leave the delete function as a future task.
 
 \TODO{add a descriptive graphic}
 
