@@ -11,6 +11,8 @@
 \usepackage{hyperref}
 \usepackage{listings}
 \usepackage{caption,subcaption}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{amsmath}
 %
 \newcommand{\TODO}[1]{\textcolor{red}{\boxed{\mathbf{TODO }} {\textit{#1}} }}
 \newcommand{\REMARK}[1]{\textcolor{blue}{\boxed{\mathbf{Remark }} {\textit{#1}} }}
@@ -18,6 +20,8 @@
 \newcommand{\remark}{\REMARK}
 \newcommand{\email}[1]{\texttt{#1}}
 %
+% for algorithms2e
+\LinesNumbered
 \begin{document}
 
 \title{RNav - R-Tree Navigation Helper on Google App Engine}
@@ -94,7 +98,7 @@ We decided to store nodes with an automatically generated key and the entries as
 \TODO{Add more explaining prose about the key-value design in app engine}
 
 \subsection{Navigation Algorithm}
-\TODO{fill in text}
+\input{nav.tex}
 \bibliographystyle{abbrv}
 \bibliography{main}
 

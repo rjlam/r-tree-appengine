@@ -1,18 +1,36 @@
 body{
 	padding: 0px;
 	margin: 0px;
-	font-family: Verdana;
-	font-size: 12px;
+	font-family: "Proxima Nova Regular",
+        "Helvetica Neue",Arial,Helvetica,sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 14px;
 	background-color: #EEEEEE;
 	color: #555555;
 }
 
 h1, h2, h3, h4 {
-	color: F0A848;
+	color: #F0A848;
+}
+
+a {
+    color: #51b2ff;
+}
+
+a:hover {
+    color: #F0A848;
+}
+
+
+.input {
+    border: 1px solid #555555;
+    background-color: #FFFFFF;
+    color: #555555;
 }
 
 .button {
-	border: 1px solid F0A848;
+	border: 1px solid #F0A848;
 	color: white;
 	background-color: #787878;
 }
@@ -23,6 +41,14 @@ h1, h2, h3, h4 {
 
 #header {
 	background-color: #787878;
+    background: -moz-linear-gradient(top, #787878 0%, #353535 100%); /* FF3.6+ */
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#787878), color-stop(100%,#353535)); /* Chrome,Safari4+ */
+    background: -webkit-linear-gradient(top, #787878 0%,#353535 100%); /* Chrome10+,Safari5.1+ */
+    background: -o-linear-gradient(top, #787878 0%,#353535 100%); /* Opera 11.10+ */
+    background: -ms-linear-gradient(top, #787878 0%,#353535 100%); /* IE10+ */
+    background: linear-gradient(to bottom, #787878 0%,#353535 100%); /* W3C */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#787878', endColorstr='#353535',GradientType=0 ); /* IE6-9 */
+
 	padding: 10px;
 	text-align: center;
 	border-bottom: 2px solid #F0A848;
@@ -33,10 +59,9 @@ h1, h2, h3, h4 {
 	color: white;
 	vertical-align: middle;
 	font-size: 30px;
-	font-family: Helvetica;
-	//text-transform:uppercase;
-	 -webkit-font-smoothing: antialiased;
-     font-smoothing: antialiased;
+	font-family: "Skolar Bold","Times New Roman",serif;
+    font-weight: 700;
+    font-style: normal;
 }
 
 #container {
@@ -50,7 +75,7 @@ h1, h2, h3, h4 {
 	min-height: 300px;
 	margin: 0 auto;
 	padding: 0px;
-	border: 1px solid #222222;
+	border: 1px solid #787878;
 	text-align: center;
 	background-color: white;
 }
@@ -62,3 +87,4 @@ h1, h2, h3, h4 {
 .visible {
 	
 }
+

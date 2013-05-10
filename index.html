@@ -17,15 +17,22 @@
 	<p>Google App Engine R-tree</p>
 </div>
 <div id=container>
+    <h2>About</h2>
+    <p>This is a query tool that finds the route between two geographical 
+    coordinates on a map (within California) using a subset of the
+    <a href="http://www.chorochronos.org/?q=node/59">California Roads</a> data set. The data is indexed 
+    using an R-tree implemented on top of Google App Engine Datastore.</p>
 	<h2>Instructions</h2>
-	<p>Input your start and end points on the for your query and the 
-    rectangles intersecting with the MBR formed by the points
-	will be populated in the chart below. Points should be of the 
-	form ##.#, ##.#. The bottom left coordinate is ##.#, ##.# and
-	the top right coordinate is ##.#, ##.#.</p>
+	<p>Input your start and end coordinates for your query and the 
+    rectangles forming the route between the two will be populated 
+    in the chart below. Points should be of the form ##.#, ##.#, where 
+    the first part of the coordinate is longitude (horizontal axis), and the second part is 
+    latitude (vertical axis). The bottom left coordinate is -122.2, 37.5 and
+	the top right coordinate is -121.7, 37.8.</p>
+    <p>An example query: -121.7,37.59 to -122.2,37.8</p>
 	<form name="query_box" id="query_box_form" method="post" onsubmit="parseQuery();return false;">
-		Start point: <input type="text" name="startPoint" id="startPoint"> <br/>
-		End point: <input type="text" name="endPoint" id="endPoint"><br/>
+		Start point: <input type="text" name="startPoint" id="startPoint" class="input"> <br/>
+		End point: <input type="text" name="endPoint" id="endPoint" class="input"><br/>
 		<input type="hidden" name="client_id" value="{{ id }}"/>
 		<input type="hidden" name="server_token" value="{{ token }}"/>
 		<input type="submit" name="submit" class="button" onClick="$('#query_box_form').submit();return false;">
@@ -50,4 +57,3 @@
 	<div id="confirm" style="display:none"></div>
 </div>
 </body>
-</html>
