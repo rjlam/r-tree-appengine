@@ -216,12 +216,16 @@ class HandleQuery(webapp.RequestHandler):
         eEntry = make_leaf(rTree.Rect([eParts[0],eParts[1]],[eParts[0], eParts[1]]), tree) 
         allRect = rTree.Entry(rTree.Rect([minX,minY],[maxX, maxY]))
         results = tree.search(allRect)
-        gRect, path, mx, my = self.computePath(sEntry, eEntry, tree, results)
-        message_template['rect'] = path        
-        message_template['grect'] = gRect
-        message_template['minVals'] = {'mx':mx, 'my':my}
-        message_template['sp'] = {'x':sEntry.I.boundingBoxMin[0], 'y':sEntry.I.boundingBoxMin[1]}
-        message_template['ep'] = {'x':eEntry.I.boundingBoxMin[0], 'y':eEntry.I.boundingBoxMin[1]}
+        if len(results) > 10000 : 
+            message_template['type'] = "error"
+            message_template['message'] = "Selected area too large for route computation. (Exceeding 10,000 rectangles)."
+        else :
+            gRect, path, mx, my = self.computePath(sEntry, eEntry, tree, results)
+            message_template['rect'] = path        
+            message_template['grect'] = gRect
+            message_template['minVals'] = {'mx':mx, 'my':my}
+            message_template['sp'] = {'x':sEntry.I.boundingBoxMin[0], 'y':sEntry.I.boundingBoxMin[1]}
+            message_template['ep'] = {'x':eEntry.I.boundingBoxMin[0], 'y':eEntry.I.boundingBoxMin[1]}
         return simplejson.dumps(message_template)
 		
 class DoBulkLoad(webapp.RequestHandler):

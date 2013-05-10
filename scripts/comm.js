@@ -49,6 +49,7 @@ function bulkLoadData(){
 	  	success: function(data) {
 			$("#status").dialog( "close" );
 			$("#loadDiv").hide();
+			$("#messageDiv").html("Bulk loading completed.");
 			return false;
 		},
 		error: function(data) {
