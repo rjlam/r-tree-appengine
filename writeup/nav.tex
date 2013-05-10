@@ -1,7 +1,8 @@
 We built a small navigation application on top of the R-tree interface.
 Given two points, if they are connected by roads, the application returns the list of rectangles which comprise (approximately) the shortest path.
 We say approximately because the ``distance'' between two roads is simply the size of the one you're currently on---this design decision was purely due to time and technical limitations.
-What were the reasons for developing this particular application?
+There are several reasons why we chose this as our example application.
+
 
 An immediate motivation is that navigation applications are a well-known, simple spatial query that is rather interesting.
 Moreover, shortest-path algorithms (in our case, Dijkstra's) are extremely well-known, but they are not often presented in a distributed setting.
