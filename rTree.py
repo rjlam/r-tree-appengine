@@ -103,8 +103,14 @@ class Entry :
 			return None
 		if type(self.child) == type(Node(None)) : 
 			return self.child
-		dbn = DBNode.get_by_id(self.child)
+		dbn = memcache.get(str(self.child))
+		wasMemcached = True
+		if not dbn: 
+			wasMemcached = False
+			dbn = DBNode.get_by_id(self.child)
 		if dbn is not None : 
+			if not wasMemcached : 
+				memcache.add(str(self.child), dbn, 3600)
 			return Node(dbn)
 		return None
 		
@@ -149,6 +155,7 @@ class Node :
 			self.dbn = DBNode(size=self.size, isRoot=self.isRoot)		
 		self.dbn.entries = cPickle.dumps(self.entries)
 		self.dbn.put()
+		memcache.add(str(self.dbn.key().id()), dbn, 3600)
 		return self.dbn.key().id()
 				
 ###########
@@ -157,6 +164,16 @@ class DBMetaData(db.Model):
 	rootId = db.IntegerProperty()
 	minEntries = db.IntegerProperty()
 	curId = db.IntegerProperty()
+
+def getMeta(): 
+	dbm = memcache.get("metadata")
+	if dbm is None : 
+		dbm = DBMetaData.get_by_key_name("metadata")
+		if dbm is None :
+			return None
+		memcache.add("metadata", dbm, 3600)
+	return dbm
+			
 		
 class RTree : 
 	root = None
@@ -166,11 +183,14 @@ class RTree :
 	
 	def __init__(self, pageSize = None , mE = None):
 		if pageSize is None and mE is None : 
-			dbm = DBMetaData.get_by_key_name("metadata")
+			dbm = getMeta()
 			self.rootKey = dbm.rootId
 			self.minEntries = dbm.minEntries
 			self.curId = dbm.curId
-			self.root = Node(DBNode.get_by_id(self.rootKey))
+			dbn =  memcache.get(str(self.rootKey))
+			if dbn is None : 
+				dbn = DBNode.get_by_id(self.rootKey)
+			self.root = Node(dbn)
 		else : 
 			self.root = Node(None, pageSize, True)
 			self.minEntries = mE
@@ -182,6 +202,7 @@ class RTree :
 			self.rootKey = self.root.save()
 		dbm = DBMetaData(rootId = self.rootKey, minEntries=self.minEntries, curId=self.curId, key_name="metadata")
 		dbm.put()
+		memcache.add("metadata", dbm)
 	
 	def chooseLeaf(self, newEntry, path, depth=-1):
 		n = self.root

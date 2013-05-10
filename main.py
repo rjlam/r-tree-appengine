@@ -53,7 +53,7 @@ def createRects(fn):
 ## these functions are used to actually visualize rectangles from the tree... 
 ## for now visualize the entire tree, but we'll eventually just visualize the result set.	
 def parseTree() : 
-	meta = rTree.DBMetaData.get_by_key_name("metadata")
+	meta = rTree.getMeta()
 	if meta is None :
 		return (None,None, None, None)
 	scalingFactor = 1
@@ -191,7 +191,7 @@ class HandleQuery(webapp.RequestHandler):
             'message': 'ok',  
             'rect': '[]' # will be a list of rectangles
         }
-        meta = rTree.DBMetaData.get_by_key_name("metadata")
+        meta = rTree.getMeta()
         if meta is None :	
             message_template['message'] = "No RTree in database."
             return simplejson.dumps(message_template)
@@ -228,7 +228,7 @@ class DoBulkLoad(webapp.RequestHandler):
 	def post(self):
 		showBulk = "invisible"
 		msg = "No bulk loading to do"
-		meta = rTree.DBMetaData.get_by_key_name("metadata")
+		meta = rTree.getMeta()
 		if meta is None : 
 			fn = "RTree.pickled" 
 			#fn = "CaStreet.ascii.10k" #"USclpoint.fnl"
@@ -249,7 +249,7 @@ class DoBulkLoad(webapp.RequestHandler):
 class MainPage(webapp.RequestHandler):
 
     def randomSearch(self):
-        meta = rTree.DBMetaData.get_by_key_name("metadata")
+        meta = rTree.getMeta()
         if meta is None :	
             return None	
         rtree = rTree.RTree(None, None)
@@ -292,7 +292,7 @@ class MainPage(webapp.RequestHandler):
                 ch = ChannelPool(key_name = client_id, client_id=client_id, token=token, in_use=True, expire=expire)
                 ch.put() 
         showBulk = "visible"
-        meta = rTree.DBMetaData.get_by_key_name("metadata")
+        meta = rTree.getMeta()
         if meta is not None :       
             showBulk = "invisible"
         template_values = {'token': token,
