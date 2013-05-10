@@ -39,9 +39,10 @@ We have two core observations:
 
 1) Using the R-tree can help trim the portion of the graph Dijkstra's algorithm must traverse.
 This allows our algorithm to have a better grasp of how big the graph will actually be, and so may improve performance.
-For enormous graphs, it may be that real-life search algorithms would have to be carefully engineered to perform well---this R-tree allows us to really chop down the graph size and avoid that hurdle.
+In production applications, the graphs may be so large that a shortest-path algorithm will have to be carefully engineered to handle the giant input.
+Here we see that the R-tree allows for a natural ``trimming'' of the input graph, perhaps helping make it more manageable.
 The downside is that it may lead to a slightly non-optimal path, if in fact the best roads involve going ``out of our way'' a bit, but due to the nice properties of spatial data it will not be too bad.
-In the extreme case, the \emph{only} paths may be very winding, so our search would fail!
+In the extreme case, the \emph{only} paths may be very winding and leave the trimmed area, so our search would fail!
 We are saving our user a very long drive, however.
 
 2) Using R-trees leads to a natural \emph{partition} of the graph.
