@@ -29,15 +29,15 @@ function submitQuery1(){
 }
 
 function submitQuery2(){
-	$("#startPoint").val("-122.1,37.7");
-	$("#endPoint").val("-122.2,37.8");
+	$("#startPoint").val("-122.259,37.8368");
+	$("#endPoint").val("-122.258,37.8344");
 	$("#query_box_form").submit();
 	return false;
 }
 
 function submitQuery3(){
-	$("#startPoint").val("-122.1,37.7");
-	$("#endPoint").val("-122.2,37.8");
+	$("#startPoint").val("-151,10");
+	$("#endPoint").val("-101,66");
 	$("#query_box_form").submit();
 	return false;
 }
